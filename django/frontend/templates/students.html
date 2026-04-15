@@ -1,0 +1,350 @@
+{% extends 'base.html' %}
+{% block content %}
+<style>
+    .page-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 25px; }
+    .page-header h1 { font-size: 2.2rem; margin: 0; font-weight: 700; }
+    .page-header p { margin: 5px 0 0 0; color: #aaa; }
+    
+    .search-row { display: flex; justify-content: flex-start; gap: 10px; margin-bottom: 20px; }
+    .search-input-box { width: 400px; padding: 12px 20px; border-radius: 25px; border: 1px solid #555; background: transparent; color: white; font-family: inherit; }
+    .btn-search { border-radius: 25px; padding: 10px 30px; font-weight: 600; }
+
+    /* The main table container */
+    .students-container {
+        border: 2px solid #3b71ca;
+        border-radius: 8px;
+        padding: 20px;
+        background: transparent;
+        overflow-x: auto;
+    }
+
+    .table-students { width: 100%; border-collapse: separate; border-spacing: 0 10px; min-width: 800px; }
+    .table-students th { font-weight: 600; color: #dfdfdf; text-align: left; padding: 0 20px 10px 20px; font-size: 0.9rem; }
+    
+    /* Rows are individually rounded boxes */
+    .table-students tbody tr {
+        background: transparent;
+    }
+    .table-students tbody td {
+        border-top: 1px solid #555;
+        border-bottom: 1px solid #555;
+        padding: 12px 20px;
+        vertical-align: middle;
+        font-weight: 600;
+        font-size: 0.9rem;
+    }
+    .table-students tbody td:first-child {
+        border-left: 1px solid #555;
+        border-top-left-radius: 12px;
+        border-bottom-left-radius: 12px;
+    }
+    .table-students tbody td:last-child {
+        border-right: 1px solid #555;
+        border-top-right-radius: 12px;
+        border-bottom-right-radius: 12px;
+        text-align: right;
+    }
+
+    .btn-action { padding: 4px 18px; border-radius: 20px; font-size: 0.8rem; font-weight: 600; color: white; border: none; cursor: pointer; transition: 0.2s opacity; }
+    .btn-action:hover { opacity: 0.8; }
+    .btn-edit { background: #3b71ca; margin-right: 5px; }
+    .btn-del { background: #ef4444; }
+
+    /* Modal Styling */
+    .modal-overlay { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(0,0,0,0.8); display: flex; justify-content: center; align-items: center; z-index: 1000; opacity: 1; transition: 0.2s ease-in-out; }
+    .modal-overlay.hidden { display: none; opacity: 0; pointer-events: none; }
+    .modal-card { background: #18181A; border: 1px solid #3b71ca; border-radius: 16px; width: 550px; padding: 30px; position: relative; max-width: 90vw; }
+    .modal-close { position: absolute; top: 20px; right: 20px; background: transparent; border: none; color: white; cursor: pointer; font-size: 1.2rem; }
+    .modal-title { display: flex; align-items: center; gap: 15px; font-size: 1.3rem; margin: 0 0 25px 0; font-weight: 600; }
+    .modal-icon { background: #3b71ca; width: 32px; height: 32px; border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 1.5rem; }
+    .modal-subtitle { font-size: 0.9rem; color: #dfdfdf; margin-bottom: 15px; font-weight: 500; }
+    
+    .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 30px; }
+    .form-group { display: flex; flex-direction: column; }
+    .modal-input { width: 100%; box-sizing: border-box; background: transparent; border: 1px solid #3b71ca; border-radius: 12px; padding: 12px 15px; color: white; font-family: inherit; outline: none; }
+    .modal-input:focus { background: rgba(255,255,255,0.05); }
+    .modal-input::placeholder { color: #555; }
+    .modal-label { display: block; font-size: 0.8rem; margin-bottom: 8px; color: #dfdfdf; }
+    
+    .modal-actions { display: flex; justify-content: flex-end; gap: 12px; }
+</style>
+
+<div class="page-header" style="align-items: center;">
+    <div>
+        <h1>My Students</h1>
+        <p>Manage and register student information</p>
+    </div>
+    <button class="btn btn-blue" style="border-radius:12px; padding:12px 25px; font-weight:600;" onclick="openAddModal()">+ Add Student</button>
+</div>
+
+<div class="search-row">
+    <input type="text" id="search-student" class="search-input-box" placeholder="Search students by their school id or name" oninput="loadTable()">
+    <button class="btn btn-blue btn-search" onclick="loadTable()">Search</button>
+</div>
+
+<div class="students-container">
+    <table class="table-students">
+        <thead>
+            <tr>
+                <th>School ID</th>
+                <th>Name</th>
+                <th>Section</th>
+                <th>Gender</th>
+                <th>Email Address</th>
+                <th>Phone</th>
+                <th style="text-align: center;">Actions</th>
+            </tr>
+        </thead>
+        <tbody id="students-tbody">
+            <!-- Dynamically populated -->
+        </tbody>
+    </table>
+</div>
+
+<!-- Add/Edit Modal -->
+<div class="modal-overlay hidden" id="studentModal">
+    <div class="modal-card">
+        <button class="modal-close" onclick="closeModal('studentModal')">✕</button>
+        <div class="modal-title">
+            <div class="modal-icon">+</div>
+            <span id="modal-title-text">Add Student</span>
+        </div>
+        <div class="modal-subtitle">Basic Information</div>
+        <input type="hidden" id="edit_index" value="-1">
+        
+        <div class="form-grid">
+            <div class="form-group">
+                <label class="modal-label">School ID</label>
+                <input type="text" id="stud_school_id" class="modal-input" placeholder="e.g. 0122">
+            </div>
+            <div class="form-group">
+                <label class="modal-label">Subject</label>
+                <select id="stud_subject" class="modal-input">
+                    <!-- Loaded via JS -->
+                </select>
+            </div>
+            <div class="form-group">
+                <label class="modal-label">Last Name</label>
+                <input type="text" id="stud_lname" class="modal-input" placeholder="Last Name">
+            </div>
+            <div class="form-group">
+                <label class="modal-label">First Name</label>
+                <input type="text" id="stud_fname" class="modal-input" placeholder="First Name">
+            </div>
+            <div class="form-group">
+                <label class="modal-label">Section</label>
+                <input type="text" id="stud_section" class="modal-input" placeholder="e.g. 1">
+            </div>
+            <div class="form-group">
+                <label class="modal-label">Gender</label>
+                <input type="text" id="stud_gender" class="modal-input" placeholder="e.g. F">
+            </div>
+            <div class="form-group">
+                <label class="modal-label">Email Address</label>
+                <input type="email" id="stud_email" class="modal-input" placeholder="Optional">
+            </div>
+            <div class="form-group">
+                <label class="modal-label">Phone Number</label>
+                <input type="text" id="stud_phone" class="modal-input" placeholder="Optional">
+            </div>
+        </div>
+        
+        <div class="modal-actions">
+            <button class="btn" style="background:transparent; border:1px solid #555; color:white; border-radius:12px; padding:10px 25px; font-weight:600;" onclick="closeModal('studentModal')">Cancel</button>
+            <button class="btn btn-blue" id="btn-save-stud" style="border-radius:12px; padding:10px 25px; font-weight:600;" onclick="saveStudent()">+ Add Student</button>
+        </div>
+    </div>
+</div>
+
+<!-- Removed deleteModal as we use global customConfirm now -->
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+    function closeModal(id) {
+        document.getElementById(id).classList.add('hidden');
+    }
+
+    function populateSubjects() {
+        let subjectsData = JSON.parse(localStorage.getItem('mySubjectsData') || '[]');
+        let select = document.getElementById('stud_subject');
+        
+        if (subjectsData.length === 0) {
+            select.innerHTML = '<option value="None">No Subjects Found</option>';
+        } else {
+            select.innerHTML = '';
+            let loaded = new Set();
+            subjectsData.forEach(subj => {
+                if(!loaded.has(subj.name)) {
+                    select.innerHTML += `<option value="${subj.name}">${subj.name}</option>`;
+                    loaded.add(subj.name);
+                }
+            });
+        }
+    }
+
+    function openAddModal() {
+        populateSubjects();
+        document.getElementById('modal-title-text').innerText = 'Add Student';
+        document.getElementById('btn-save-stud').innerText = '+ Add Student';
+        document.getElementById('edit_index').value = '-1';
+        
+        document.getElementById('stud_school_id').value = '';
+        document.getElementById('stud_lname').value = '';
+        document.getElementById('stud_fname').value = '';
+        document.getElementById('stud_section').value = '';
+        document.getElementById('stud_gender').value = '';
+        document.getElementById('stud_email').value = '';
+        document.getElementById('stud_phone').value = '';
+        
+        document.getElementById('studentModal').classList.remove('hidden');
+    }
+
+    function editStudent(idx) {
+        populateSubjects();
+        let studentsList = JSON.parse(localStorage.getItem('studentsList') || '[]');
+        let student = studentsList[idx];
+        
+        document.getElementById('modal-title-text').innerText = 'Edit Student';
+        document.getElementById('btn-save-stud').innerText = 'Update Student';
+        document.getElementById('edit_index').value = idx;
+        
+        document.getElementById('stud_school_id').value = student.school_id || '';
+        document.getElementById('stud_subject').value = student.subject || '';
+        document.getElementById('stud_lname').value = student.lname || '';
+        document.getElementById('stud_fname').value = student.fname || '';
+        document.getElementById('stud_section').value = student.section || '';
+        document.getElementById('stud_gender').value = student.gender || '';
+        document.getElementById('stud_email').value = student.email || '';
+        document.getElementById('stud_phone').value = student.phone || '';
+        
+        document.getElementById('studentModal').classList.remove('hidden');
+    }
+
+    function saveStudent() {
+        let school_id = document.getElementById('stud_school_id').value.trim();
+        let subject = document.getElementById('stud_subject').value;
+        let lname = document.getElementById('stud_lname').value.trim();
+        let fname = document.getElementById('stud_fname').value.trim();
+        let section = document.getElementById('stud_section').value.trim();
+        let gender = document.getElementById('stud_gender').value.trim();
+        let email = document.getElementById('stud_email').value.trim();
+        let phone = document.getElementById('stud_phone').value.trim();
+
+        if (!school_id || !lname || !fname || !section) {
+            customAlert('School ID, First Name, Last Name, and Section are required.');
+            return;
+        }
+
+        let studentsList = JSON.parse(localStorage.getItem('studentsList') || '[]');
+        let editIdx = parseInt(document.getElementById('edit_index').value);
+
+        let studentObj = {
+            school_id: school_id,
+            name: `${lname}, ${fname}`, // Formatted as Lastname, Firstname per user request
+            fname: fname,
+            lname: lname,
+            subject: subject,
+            section: section,
+            gender: gender,
+            email: email,
+            phone: phone
+        };
+
+        if (editIdx >= 0) {
+            // Edit existing
+            studentsList[editIdx] = studentObj;
+        } else {
+            // Add new
+            studentsList.push(studentObj);
+        }
+
+        localStorage.setItem('studentsList', JSON.stringify(studentsList));
+        closeModal('studentModal');
+        loadTable();
+    }
+
+    function requestDelete(idx) {
+        customConfirm("Are you sure you want to delete this student info permanently?\n\nThis action cannot be undone and will cleanly remove them from all class records entirely.", function() {
+            let studentsList = JSON.parse(localStorage.getItem('studentsList') || '[]');
+            let removedStudent = studentsList.splice(idx, 1)[0];
+            localStorage.setItem('studentsList', JSON.stringify(studentsList));
+            
+            // Scrub their grades to clean localStorage space
+            if(removedStudent){
+                let gKey = `grades_${removedStudent.subject}_${removedStudent.section}`;
+                let gradesData = JSON.parse(localStorage.getItem(gKey) || '{}');
+                if(gradesData[removedStudent.name]) {
+                    delete gradesData[removedStudent.name];
+                    localStorage.setItem(gKey, JSON.stringify(gradesData));
+                }
+            }
+    
+            loadTable();
+        }, "Delete Student", "#ef4444", "Delete Permanently");
+    }
+
+    function loadTable() {
+        let studentsList = JSON.parse(localStorage.getItem('studentsList') || '[]');
+        let query = document.getElementById('search-student').value.toLowerCase().trim();
+        let tbody = document.getElementById('students-tbody');
+        tbody.innerHTML = '';
+        
+        let filtered = [...studentsList]; // Clone for sorting
+        
+        // --- SMART SORTING ---
+        filtered.sort((a, b) => {
+            // Level 1: Section (Numerical awareness)
+            let secA = (a.section || "").replace(/\D/g, "");
+            let secB = (b.section || "").replace(/\D/g, "");
+            let numA = parseInt(secA) || 0;
+            let numB = parseInt(secB) || 0;
+            
+            if (numA !== numB) return numA - numB;
+            
+            // If numbers same, fallback to string comparison (e.g. "Section A" vs "Section B")
+            if (a.section !== b.section) return (a.section || "").localeCompare(b.section || "");
+
+            // Level 2: Student Name (A-Z)
+            return (a.name || "").localeCompare(b.name || "");
+        });
+
+        if (query) {
+            filtered = filtered.filter(s => 
+                (s.school_id || '').toLowerCase().includes(query) ||
+                (s.name || '').toLowerCase().includes(query)
+            );
+        }
+
+        if (filtered.length === 0) {
+            tbody.innerHTML = `<tr><td colspan="7" style="text-align:center; padding: 30px; color:#aaa;">${query ? 'No matching students found.' : 'Your student database is empty. Add a student to get started!'}</td></tr>`;
+            return;
+        }
+
+        filtered.forEach(s => {
+            // Find true index in original list for editing/deleting
+            let trueIdx = studentsList.indexOf(s);
+            
+            tbody.innerHTML += `
+                <tr>
+                    <td>${s.school_id || '—'}</td>
+                    <td>${s.name || '—'}</td>
+                    <td style="text-align:center;">${s.section || '—'}</td>
+                    <td style="text-align:center; text-transform:uppercase;">${s.gender || '—'}</td>
+                    <td>${s.email || '—'}</td>
+                    <td>${s.phone || '—'}</td>
+                    <td style="text-align: center; white-space:nowrap;">
+                        <button class="btn-action btn-edit" onclick="editStudent(${trueIdx})">Edit</button>
+                        <button class="btn-action btn-del" onclick="requestDelete(${trueIdx})">Delete</button>
+                    </td>
+                </tr>
+            `;
+        });
+    }
+
+    document.addEventListener('DOMContentLoaded', () => {
+        loadTable();
+    });
+</script>
+{% endblock %}

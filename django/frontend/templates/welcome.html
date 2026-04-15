@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Welcome - EDULedger</title>
+    <link rel="icon" type="image/png" href="/static/images/logo.png?v=1" sizes="32x32">
+    <link rel="apple-touch-icon" href="/static/images/logo.png?v=1">
+    <link rel="shortcut icon" href="/static/images/logo.png?v=1">
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            background-color: #111111;
+            color: #ffffff;
+            font-family: 'Montserrat', sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+        }
+        .auth-card {
+            background-color: #1E1E1E;
+            padding: 3rem;
+            border-radius: 12px;
+            width: 100%;
+            max-width: 500px;
+            box-shadow: 0 0 15px rgba(28, 100, 242, 0.4);
+            border: 2px solid #287bff;
+            box-sizing: border-box;
+            text-align: center;
+        }
+        .logo-container {
+            text-align: center;
+            margin-bottom: 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        .auth-card h2 {
+            font-size: 1.6rem;
+            margin-top: 0;
+            margin-bottom: 12px;
+            font-weight: 700;
+        }
+        .auth-card p.subtitle {
+            color: #aaaaaa;
+            font-size: 0.95rem;
+            margin-bottom: 35px;
+            line-height: 1.4;
+            padding: 0 15px;
+            font-weight: 500;
+        }
+        
+        .features-list {
+            text-align: left;
+            margin-bottom: 35px;
+            padding: 0 10px;
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+        .feature-item {
+            display: flex;
+            align-items: center;
+        }
+        .feature-icon {
+            width: 48px;
+            height: 48px;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-right: 18px;
+            flex-shrink: 0;
+        }
+        .feature-icon svg {
+            width: 26px;
+            height: 26px;
+        }
+        .feature-text h4 {
+            margin: 0 0 4px 0;
+            font-size: 0.95rem;
+            font-weight: 700;
+            color: #ffffff;
+        }
+        .feature-text p {
+            margin: 0;
+            font-size: 0.8rem;
+            color: #aaaaaa;
+            font-weight: 500;
+        }
+        
+        /* Icon Colors Matching Image */
+        .ic-blue { background-color: #A5C8FF; color: #1E3A8A; } /* Classes & Students */
+        .ic-green { background-color: #B5F1B5; color: #14532D; } /* Gradebook */
+        .ic-red { background-color: #FFAAAA; color: #7F1D1D; } /* At Risk */
+        .ic-yellow { background-color: #FCE8AA; color: #713F12; } /* Reports */
+
+        .btn-primary {
+            width: 100%;
+            padding: 14px;
+            background-color: #4A6CFF;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 1rem;
+            font-family: 'Montserrat', sans-serif;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+        .btn-primary:hover {
+            background-color: #3b5bdb;
+        }
+    </style>
+</head>
+<body>
+    <div class="auth-card">
+        <div class="logo-container">
+            <img src="/static/images/logo.png" alt="Student Record Management Logo" style="width: 260px; margin-bottom: -35px;">
+        </div>
+
+        <h2>Welcome to EDULedger!</h2>
+        <p class="subtitle">Easily handle your classes, sections,<br>and student grades in one place.</p>
+        
+        <div class="features-list">
+            <div class="feature-item">
+                <div class="feature-icon ic-blue">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
+                        <circle cx="9" cy="7" r="4"></circle>
+                        <path d="M23 21v-2a4 4 0 0 0-3-3.87"></path>
+                        <path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
+                    </svg>
+                </div>
+                <div class="feature-text">
+                    <h4>Classes & Students</h4>
+                    <p>Manages your classes, students, and daily attendance</p>
+                </div>
+            </div>
+
+            <div class="feature-item">
+                <div class="feature-icon ic-green">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M22 10v6M2 10l10-5 10 5-10 5z"></path>
+                        <path d="M6 12v5c3 3 9 3 12 0v-5"></path>
+                    </svg>
+                </div>
+                <div class="feature-text">
+                    <h4>Gradebook & Marks</h4>
+                    <p>Track grades and student progress</p>
+                </div>
+            </div>
+
+            <div class="feature-item">
+                <div class="feature-icon ic-red">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path>
+                        <line x1="12" y1="9" x2="12" y2="13"></line>
+                        <line x1="12" y1="17" x2="12.01" y2="17"></line>
+                    </svg>
+                </div>
+                <div class="feature-text">
+                    <h4>At Risk & Deadline Pressure</h4>
+                    <p>view at risk students and tasks due soon</p>
+                </div>
+            </div>
+
+            <div class="feature-item">
+                <div class="feature-icon ic-yellow">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <line x1="18" y1="20" x2="18" y2="10"></line>
+                        <line x1="12" y1="20" x2="12" y2="4"></line>
+                        <line x1="6" y1="20" x2="6" y2="14"></line>
+                    </svg>
+                </div>
+                <div class="feature-text">
+                    <h4>Reports</h4>
+                    <p>Generate reports and track overall progress</p>
+                </div>
+            </div>
+        </div>
+
+        <button class="btn-primary" onclick="window.location.href='/dashboard/'">Get Started</button>
+    </div>
+</body>
+</html>

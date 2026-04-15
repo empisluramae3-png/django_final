@@ -1,0 +1,261 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login - EDULedger</title>
+    <link rel="icon" type="image/png" href="/static/images/logo.png?v=1" sizes="32x32">
+    <link rel="apple-touch-icon" href="/static/images/logo.png?v=1">
+    <link rel="shortcut icon" href="/static/images/logo.png?v=1">
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            background-color: #111111;
+            color: #ffffff;
+            font-family: 'Montserrat', sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+        }
+        .logo-container {
+            text-align: center;
+            margin-bottom: 2rem;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        .logo-container h1 {
+            font-size: 1.6rem;
+            font-weight: 600;
+            line-height: 1.2;
+            margin: 0;
+            letter-spacing: 1px;
+        }
+        .auth-card {
+            background-color: #1E1E1E;
+            padding: 3rem 2.5rem;
+            border-radius: 12px;
+            width: 100%;
+            max-width: 400px;
+            box-shadow: 0 0 15px rgba(28, 100, 242, 0.4);
+            border: 2px solid #287bff;
+            box-sizing: border-box;
+        }
+
+        /* Custom Alert Styling */
+        #global-modal-overlay {
+            display: none; position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
+            background: rgba(0,0,0,0.8); z-index: 9999; align-items: center; justify-content: center;
+        }
+        .global-modal-content {
+            background: #1a1a1a; width: 380px; border-radius: 16px; padding: 30px; text-align: center;
+            border: 2px solid #3b71ca; position: relative; max-width: 90vw;
+        }
+        #global-modal-title { font-size: 1.3rem; margin: 0 0 10px 0; font-weight: 700; }
+        #global-modal-msg { color: #aaa; font-size: 0.95rem; margin-bottom: 25px; line-height: 1.5; }
+        .btn-pill {
+            padding: 8px 24px; border-radius: 30px; font-size: 0.9rem; font-weight: 600; color: white; border: none; cursor: pointer; transition: 0.2s; background: #3b71ca;
+        }
+        .btn-pill:hover { opacity: 0.8; }
+        .auth-card h2 {
+            text-align: center;
+            font-size: 1.8rem;
+            margin-top: 0;
+            margin-bottom: 5px;
+            font-weight: 600;
+        }
+        .auth-card p.subtitle {
+            text-align: center;
+            color: #aaaaaa;
+            font-size: 0.85rem;
+            margin-bottom: 25px;
+        }
+        .form-group {
+            margin-bottom: 1.2rem;
+        }
+        .form-group label {
+            display: block;
+            font-size: 0.9rem;
+            font-weight: 600;
+            margin-bottom: 8px;
+        }
+        .input-group {
+            position: relative;
+        }
+        .input-group svg.icon-left {
+            position: absolute;
+            left: 12px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: #ffffff;
+            width: 16px;
+            height: 16px;
+        }
+        .input-group svg.icon-right {
+            position: absolute;
+            right: 12px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: #888888;
+            width: 18px;
+            height: 18px;
+            cursor: pointer;
+        }
+        .input-group svg.icon-right:hover {
+            color: #ffffff;
+        }
+        .input-group input {
+            width: 100%;
+            padding: 12px 40px 12px 38px;
+            background-color: #1E1E1E;
+            border: 1px solid #555555;
+            border-radius: 8px;
+            color: white;
+            font-size: 0.85rem;
+            font-family: 'Montserrat', sans-serif;
+            box-sizing: border-box;
+            outline: none;
+        }
+        .input-group input:focus {
+            border-color: #287bff;
+        }
+        .input-group input::placeholder {
+            color: #888888;
+        }
+        .btn-primary {
+            width: 100%;
+            padding: 12px;
+            background-color: #4A6CFF;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 0.95rem;
+            font-family: 'Montserrat', sans-serif;
+            font-weight: 600;
+            cursor: pointer;
+            margin-top: 10px;
+            transition: background-color 0.2s;
+        }
+        .btn-primary:hover {
+            background-color: #3b5bdb;
+        }
+        .auth-footer {
+            text-align: center;
+            margin-top: 15px;
+            font-size: 0.8rem;
+            color: #ffffff;
+            font-weight: 600;
+        }
+        .auth-footer a {
+            color: #4A6CFF;
+            text-decoration: none;
+            font-weight: 600;
+        }
+        .auth-footer a:hover {
+            text-decoration: underline;
+        }
+    </style>
+</head>
+<body>
+    <div class="logo-container">
+        <img src="/static/images/logo.png" alt="EDULedger Logo" style="width: 250px; margin-bottom: -35px;">
+        <h1><span style="color:#ffffff;">EDU</span><span style="color:#3b71ca;">Ledger</span></h1>
+    </div>
+
+    <div class="auth-card">
+        <h2>Welcome back</h2>
+        <p class="subtitle">Sign in to your account</p>
+        
+        <form id="loginForm">
+            <div class="form-group">
+                <label>Email Address</label>
+                <div class="input-group">
+                    <svg class="icon-left" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"></path>
+                        <polyline points="22,6 12,13 2,6"></polyline>
+                    </svg>
+                    <input type="email" id="email" placeholder="you@gmail.com" required>
+                </div>
+            </div>
+            <div class="form-group">
+                <label>Password</label>
+                <div class="input-group">
+                    <svg class="icon-left" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
+                        <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
+                    </svg>
+                    <input type="password" id="password" placeholder="Enter your password" required>
+                    <svg class="icon-right" id="eye-icon" onclick="togglePassword()" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+                        <circle cx="12" cy="12" r="3"></circle>
+                    </svg>
+                </div>
+            </div>
+            <button type="submit" class="btn-primary">Log in</button>
+            
+            <div class="auth-footer">
+                Don't have an account? <a href="/register/">sign up</a>
+            </div>
+        </form>
+    </div>
+
+    <!-- Global Alert -->
+    <div id="global-modal-overlay">
+        <div class="global-modal-content">
+            <h3 id="global-modal-title">Notice</h3>
+            <p id="global-modal-msg">Here is a message.</p>
+            <button class="btn-pill" onclick="document.getElementById('global-modal-overlay').style.display='none'">OK</button>
+        </div>
+    </div>
+
+    <script>
+        function customAlert(msg, title="Notice", callback=null) {
+            document.getElementById('global-modal-title').innerText = title;
+            document.getElementById('global-modal-msg').innerText = msg;
+            const overlay = document.getElementById('global-modal-overlay');
+            const btn = overlay.querySelector('.btn-pill');
+            btn.onclick = function() {
+                overlay.style.display = 'none';
+                if(callback) callback();
+            };
+            overlay.style.display = 'flex';
+        }
+
+        function togglePassword() {
+            const input = document.getElementById('password');
+            const eyeIcon = document.getElementById('eye-icon');
+            if (input.type === 'password') {
+                input.type = 'text';
+                eyeIcon.innerHTML = `<path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"></path><line x1="1" y1="1" x2="23" y2="23"></line>`;
+            } else {
+                input.type = 'password';
+                eyeIcon.innerHTML = `<path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle>`;
+            }
+        }
+
+        document.getElementById('loginForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+            const email = document.getElementById('email').value.trim();
+            const password = document.getElementById('password').value.trim();
+            
+            if (!email || !password) {
+                customAlert("Please fill in both email and password.");
+                return;
+            }
+
+            const registeredUsers = JSON.parse(localStorage.getItem('registeredUsers') || '{}');
+            
+            if (registeredUsers[email] && registeredUsers[email] === password) {
+                localStorage.setItem('username', email); // Start session
+                window.location.href = '/welcome/';
+            } else {
+                customAlert("Invalid email or password. If you don't have an account, please sign up first.", "Error");
+            }
+        });
+    </script>
+</body>
+</html>

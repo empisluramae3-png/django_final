@@ -1,0 +1,171 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="page-header" style="display:flex; justify-content:space-between; align-items:flex-end; margin-bottom:30px;">
+    <div>
+        <div style="display:flex; align-items:center; gap:15px; margin-bottom:5px;">
+            <svg viewBox="0 0 24 24" width="36" height="36" fill="#DC2626" stroke="none"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14" stroke="#111" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></polyline></svg>
+            <h1 style="margin:0; font-size:2.2rem; letter-spacing:1px;">Deadline Pressure</h1>
+        </div>
+        <h3 style="margin-top:0;">These task have approaching deadline or missing entries</h3>
+    </div>
+    
+    <div class="action-buttons">
+        <button class="btn" onclick="history.back()" style="display:flex; align-items:center; gap:5px; background:transparent; border:1px solid #4a6cff;"><svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" fill="none"><polyline points="15 18 9 12 15 6"></polyline></svg> Back</button>
+    </div>
+</div>
+
+<div class="search-row" style="display:flex; gap:10px; margin-bottom:25px;">
+    <input type="text" id="search-input" class="search-input" style="flex:1; padding:10px 15px; border-radius:6px; border:1px solid #444; background:transparent; color:white;" placeholder="Search subject or task name..." onkeyup="performSearch()">
+    <button class="btn btn-blue" onclick="performSearch()">Search</button>
+</div>
+<style>
+    .highlight-row { animation: highlightAnim 2s forwards; }
+    @keyframes highlightAnim {
+        0% { background-color: rgba(220, 38, 38, 0.4); }
+        100% { background-color: transparent; }
+    }
+</style>
+
+<div class="card card-blue" style="padding: 0; overflow:hidden;">
+    <div style="padding: 15px 20px; border-bottom: 1px solid #333; display:flex; align-items:center; gap:10px; background: rgba(0,0,0,0.2);">
+        <span style="font-weight:600;">Filter:</span>
+        <select id="subject-filter" onchange="performSearch()" style="background:transparent; color:white; border:1px solid #555; padding:5px 10px; border-radius:4px; font-family:inherit; min-width:200px;">
+            <option value="all">All Subjects</option>
+        </select>
+    </div>
+    <table class="data-table">
+        <thead>
+            <tr>
+                <th>Subject</th>
+                <th>Section</th>
+                <th>Task</th>
+                <th>Missing Entries</th>
+                <th>Action</th>
+            </tr>
+        </thead>
+        <tbody id="deadlines-body">
+            <!-- Driven By JS -->
+        </tbody>
+    </table>
+</div>
+
+<script>
+    let deadlinesDB = [];
+
+    function gatherDeadlines() {
+        deadlinesDB = [];
+        let subjectsData = JSON.parse(localStorage.getItem('mySubjectsData') || '[]');
+        let allStudents = JSON.parse(localStorage.getItem('studentsList') || '[]');
+        
+        subjectsData.forEach(subj => {
+            if(subj.sections) {
+                subj.sections.forEach(sec => {
+                    let secName = sec.section;
+                    let targetSec = secName.replace(/section\s+/i, '').trim();
+                    let tasks = JSON.parse(localStorage.getItem(`tasks_${subj.name}_${secName}`) || '[]');
+                    let gradesData = JSON.parse(localStorage.getItem(`grades_${subj.name}_${secName}`) || '{}');
+                    let secStudents = allStudents.filter(s => {
+                        let sSec = (s.section || '').replace(/section\s+/i, '').trim();
+                        return sSec === targetSec;
+                    });
+                    
+                    if (secStudents.length > 0) {
+                        tasks.forEach(task => {
+                            let missingStudents = [];
+                            secStudents.forEach(st => {
+                                let score = gradesData[st.name] ? gradesData[st.name][task.id] : undefined;
+                                if (score === undefined || score === "") {
+                                    missingStudents.push(st.name);
+                                }
+                            });
+                            
+                            if (missingStudents.length > 0) {
+                                deadlinesDB.push({
+                                    subject: subj.name,
+                                    section: secName,
+                                    taskName: task.name,
+                                    taskId: task.id,
+                                    missingCount: missingStudents.length,
+                                    missingNames: missingStudents.join(', ')
+                                });
+                            }
+                        });
+                    }
+                });
+            }
+        });
+    }
+
+    function initFilterDropdown() {
+        gatherDeadlines();
+        let subjectsData = JSON.parse(localStorage.getItem('mySubjectsData') || '[]');
+        let select = document.getElementById('subject-filter');
+        select.innerHTML = '<option value="all">All Subjects</option>';
+        
+        let loaded = new Set();
+        subjectsData.forEach(subj => {
+            if(!loaded.has(subj.name)) {
+                select.innerHTML += `<option value="${subj.name}">${subj.name}</option>`;
+                loaded.add(subj.name);
+            }
+        });
+        
+        performSearch();
+    }
+
+    function renderTable(data, highlightMatch = "") {
+        let body = document.getElementById('deadlines-body');
+        body.innerHTML = '';
+        
+        if(data.length === 0) {
+            body.innerHTML = `<tr><td colspan="5" style="text-align:center; padding:25px; color:#aaa;">No missing task entries found. Everything is up to date!</td></tr>`;
+            return;
+        }
+        
+        data.forEach((row) => {
+            let matchesSearch = highlightMatch && (
+                row.subject.toLowerCase().includes(highlightMatch) ||
+                row.taskName.toLowerCase().includes(highlightMatch) ||
+                String(row.section).toLowerCase().includes(highlightMatch)
+            );
+            
+            let rowClass = matchesSearch ? "highlight-row" : "";
+            body.innerHTML += `
+                <tr class="${rowClass}">
+                    <td style="font-weight:600;">${row.subject}</td>
+                    <td>${row.section}</td>
+                    <td>${row.taskName}</td>
+                    <td style="font-weight:600; color:#DC2626;">${row.missingCount} missing scores</td>
+                    <td><a href="/subject/1/?subj=${encodeURIComponent(row.subject)}&sec=${row.section}&hltask=${row.taskId}" class="btn btn-outline" style="padding:4px 12px; font-size:0.8rem; display:flex; align-items:center; gap:5px; width:fit-content; border:1px solid #DC2626; color:#DC2626; text-decoration:none;">Go To Task <svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" fill="none"><polyline points="9 18 15 12 9 6"></polyline></svg></a></td>
+                </tr>
+            `;
+        });
+    }
+
+    function performSearch() {
+        const query = document.getElementById('search-input').value.toLowerCase().trim();
+        const subjFilter = document.getElementById('subject-filter').value;
+        
+        let filtered = deadlinesDB;
+        if (subjFilter !== 'all') {
+            filtered = filtered.filter(r => r.subject === subjFilter);
+        }
+        
+        let displayData = filtered;
+        if (query) {
+            displayData = filtered.filter(r => 
+                r.subject.toLowerCase().includes(query) || 
+                r.taskName.toLowerCase().includes(query) || 
+                String(r.section).toLowerCase().includes(query)
+            );
+        }
+        
+        renderTable(displayData, query);
+    }
+
+    window.addEventListener("pageshow", () => {
+        initFilterDropdown();
+    });
+</script>
+{% endblock %}

@@ -1,0 +1,373 @@
+{% extends 'base.html' %}
+
+{% block head %}
+<style>
+    .page-header { display: flex; justify-content: space-between; align-items: flex-end; margin-bottom: 25px; }
+    .page-header h1 { margin: 0; font-size: 2.2rem; }
+    .page-header p { margin: 5px 0 0 0; color: #aaa; }
+    
+    .subject-card {
+        border: 2px solid #1d4ed8; border-radius: 12px; background: #18181A;
+        margin-bottom: 25px; overflow: hidden; transition: 0.2s; position: relative;
+    }
+    
+    /* Subject Selection modes */
+    .delete-mode .subject-card { cursor: pointer; border-color: #555; }
+    .delete-mode .subject-card:hover { border-color: #ef4444; }
+    .delete-mode .subject-card.selected { border-color: #ef4444; background-color: rgba(239, 68, 68, 0.1); }
+    
+    .edit-mode .subject-card { cursor: pointer; border-color: #555; }
+    .edit-mode .subject-card:hover { border-color: #3b71ca; }
+    
+    /* Selection indicator overlay */
+    .selection-indicator { display: none; position: absolute; top: 15px; right: 20px; font-weight: 600; color: #ef4444; }
+    .delete-mode .subject-card.selected .selection-indicator { display: block; }
+    
+    .subject-header { padding: 15px 20px; display: flex; align-items: center; gap: 15px; }
+    .subject-header h2 { margin: 0; font-size: 1.4rem; color: #fff; }
+    
+    /* Modals */
+    .modal-overlay {
+        display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+        background: rgba(0,0,0,0.7); z-index: 1000; align-items: center; justify-content: center;
+    }
+    .modal-content { background: #1a1a1a; width: 400px; border: 2px solid #3b71ca; border-radius: 12px; padding: 25px; position: relative; }
+    .confirm-modal-content { background: #1a1a1a; width: 350px; border: 2px solid #ef4444; border-radius: 12px; padding: 25px; text-align: center; }
+    
+    /* New Table Action Buttons - Pill style */
+    .btn-pill {
+        padding: 5px 18px; border-radius: 20px; font-size: 0.8rem; font-weight: 600; color: white; border: none; cursor: pointer; transition: 0.2s opacity; display: inline-flex; justify-content: center; align-items: center; text-decoration: none;
+    }
+    .btn-pill:hover { opacity: 0.8; }
+    .btn-edit-pill { background-color: #3b71ca; }
+    .btn-del-pill { background-color: #ef4444; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <div>
+        <h1>My Classes</h1>
+        <p>Manage your classes and students</p>
+    </div>
+    <div style="display:flex; gap:10px;" id="normal-actions">
+        <button class="btn btn-blue" onclick="openAddModal()">+ Add Subject</button>
+        <button class="btn btn-outline-blue" style="color:white; border-color:#3b71ca; background-color:#3b71ca;" onclick="toggleEditMode()">Edit</button>
+        <button class="btn btn-outline-blue" style="color:white; border-color:#3b71ca; background-color:#3b71ca;" onclick="toggleDeleteMode()">Delete</button>
+    </div>
+    
+    <!-- Action Topbars for Modes -->
+    <div style="display:none; gap:10px; align-items:center;" id="delete-actions">
+        <span style="color:#ef4444; font-weight:600;">Select subjects to delete</span>
+        <button class="btn btn-outline-blue" style="color:white; border-color:#555; background-color:#555;" onclick="cancelModes()">Cancel</button>
+        <button class="btn" style="background:#ef4444; color:white; border:none;" onclick="triggerDeleteConfirmation()">Delete Selected</button>
+    </div>
+    
+    <div style="display:none; gap:10px; align-items:center;" id="edit-actions">
+        <span style="color:#3b71ca; font-weight:600;">Click a subject to edit its name</span>
+        <button class="btn btn-outline-blue" style="color:white; border-color:#555; background-color:#555;" onclick="cancelModes()">Cancel</button>
+    </div>
+</div>
+
+<div class="search-row" style="margin-bottom:30px;">
+    <input type="text" id="search-input" class="search-input" placeholder="Search classes..." onkeyup="searchClasses()">
+    <button class="btn btn-blue">Search</button>
+</div>
+
+<div id="subjects-container">
+    <!-- Rendered by JS -->
+</div>
+
+<!-- Add/Edit Section Modal -->
+<div class="modal-overlay" id="addSubjectModal">
+    <div class="modal-content">
+        <button style="position:absolute; top:15px; right:15px; background:transparent; border:none; color:white; font-size:1.2rem; cursor:pointer;" onclick="closeModal()">✕</button>
+        <h2 style="margin-top:0;" id="modal-sec-title">Add Class Section</h2>
+        <input type="hidden" id="modal-idx" value="-1">
+        <input type="hidden" id="modal-sub-idx" value="-1">
+        
+        <div style="margin-bottom:15px;">
+            <label style="display:block; margin-bottom:5px; font-size:0.8rem;">Subject Name</label>
+            <input type="text" id="modal-subj" class="search-input" style="width:100%; box-sizing:border-box;" placeholder="e.g. IPT">
+        </div>
+        <div style="margin-bottom:15px;">
+            <label style="display:block; margin-bottom:5px; font-size:0.8rem;">EDP Code</label>
+            <input type="text" id="modal-edp" class="search-input" style="width:100%; box-sizing:border-box;">
+        </div>
+        <div style="margin-bottom:15px;">
+            <label style="display:block; margin-bottom:5px; font-size:0.8rem;">Schedule</label>
+            <input type="text" id="modal-sched" class="search-input" style="width:100%; box-sizing:border-box;" placeholder="e.g. FS 7:30 AM-09:00AM">
+        </div>
+        <div style="margin-bottom:15px; display:flex; gap:10px;">
+            <div style="flex:1;">
+                <label style="display:block; margin-bottom:5px; font-size:0.8rem;">Room</label>
+                <input type="text" id="modal-room" class="search-input" style="width:100%; box-sizing:border-box;">
+            </div>
+            <div style="flex:1;">
+                <label style="display:block; margin-bottom:5px; font-size:0.8rem;">Section</label>
+                <input type="text" id="modal-sec" class="search-input" style="width:100%; box-sizing:border-box;">
+            </div>
+        </div>
+        
+        <button class="btn btn-blue" style="width:100%;" onclick="saveSection()">Save Class Section</button>
+    </div>
+</div>
+
+<!-- Edit Subject Name Modal -->
+<div class="modal-overlay" id="editSubjectNameModal">
+    <div class="modal-content" style="border-color:#3b71ca;">
+        <h2 style="margin-top:0;">Rename Subject</h2>
+        <input type="hidden" id="edit-sub-idx" value="-1">
+        <div style="margin-bottom:20px;">
+            <label style="display:block; margin-bottom:5px; font-size:0.8rem;">Subject Name</label>
+            <input type="text" id="edit-subj-name" class="search-input" style="width:100%; box-sizing:border-box;">
+        </div>
+        <div style="display:flex; justify-content:flex-end; gap:10px;">
+            <button class="btn btn-outline-blue" style="border-color:#555; color:#fff;" onclick="closeModal()">Cancel</button>
+            <button class="btn btn-blue" onclick="saveSubjectName()">Save Changes</button>
+        </div>
+    </div>
+</div>
+
+<!-- Removed confirmDeleteModal as global one is now used -->
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+    let opMode = 'normal'; // 'normal', 'delete', 'edit'
+    let selectedSubjects = new Set();
+    
+    function getSubjects() {
+        let data = localStorage.getItem('mySubjectsData');
+        if(!data) { 
+            localStorage.setItem('mySubjectsData', '[]'); 
+            return []; 
+        }
+        return JSON.parse(data);
+    }
+    
+    function renderSubjects(filter = "") {
+        const container = document.getElementById('subjects-container');
+        container.innerHTML = '';
+        container.className = opMode === 'delete' ? 'delete-mode' : (opMode === 'edit' ? 'edit-mode' : '');
+        
+        let subjects = getSubjects();
+        let studentsList = JSON.parse(localStorage.getItem('studentsList') || '[]');
+        
+        subjects.forEach((subj, sIdx) => {
+            if(filter && !subj.name.toLowerCase().includes(filter.toLowerCase())) return;
+            
+            const isSelected = selectedSubjects.has(sIdx);
+            
+            let html = `
+            <div class="subject-card ${isSelected ? 'selected' : ''}" onclick="handleSubjectClick(${sIdx})">
+                <div class="selection-indicator">✓ Selected</div>
+                <div class="subject-header">
+                    <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="#3b71ca" stroke-width="2"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path></svg>
+                    <h2>${subj.name}</h2>
+                </div>
+                <table class="data-table" style="border-top:1px solid #333;">
+                    <thead>
+                        <tr>
+                            <th style="color:#aaa;">EDP Code</th>
+                            <th style="color:#aaa;">Schedule</th>
+                            <th style="color:#aaa;">Room</th>
+                            <th style="color:#aaa; text-align:center;">Sections</th>
+                            <th style="color:#aaa; text-align:center;">Total Students</th>
+                            <th style="color:#aaa; text-align:center;">Action</th>
+                            <th style="color:#aaa; text-align:center;">Options</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+            `;
+            
+            subj.sections.forEach((sec, idx) => {
+                let targetSec = sec.section.replace(/section\s+/i, '').trim();
+                let studentCount = studentsList.filter(s => {
+                    let sSec = (s.section || '').replace(/section\s+/i, '').trim();
+                    return sSec === targetSec;
+                }).length;
+                html += `
+                    <tr onclick="event.stopPropagation()">
+                        <td style="font-weight:600;">${sec.edp}</td>
+                        <td>${sec.schedule}</td>
+                        <td>${sec.room}</td>
+                        <td style="text-align:center;">${sec.section}</td>
+                        <td style="text-align:center; font-weight:600; color:#3b71ca;">${studentCount}</td>
+                        <td style="text-align:center;">
+                            <a href="/subject/1/?subj=${encodeURIComponent(subj.name)}&sec=${encodeURIComponent(sec.section)}&edp=${sec.edp}&sch=${encodeURIComponent(sec.schedule)}" class="btn-pill" style="background:#555;">Open</a>
+                        </td>
+                        <td style="text-align:center; white-space:nowrap; gap:5px; display:flex; justify-content:center;">
+                            <button class="btn-pill btn-edit-pill" onclick="editSection(${sIdx}, ${idx})">Edit</button>
+                            <button class="btn-pill btn-del-pill" onclick="deleteSection(${sIdx}, ${idx})">Delete</button>
+                        </td>
+                    </tr>
+                `;
+            });
+            
+            html += `</tbody></table></div>`;
+            container.innerHTML += html;
+        });
+    }
+
+    /* Core Toggles and Modes */
+    function toggleDeleteMode() {
+        opMode = 'delete';
+        selectedSubjects.clear();
+        document.getElementById('normal-actions').style.display = 'none';
+        document.getElementById('edit-actions').style.display = 'none';
+        document.getElementById('delete-actions').style.display = 'flex';
+        renderSubjects(document.getElementById('search-input').value);
+    }
+    
+    function toggleEditMode() {
+        opMode = 'edit';
+        selectedSubjects.clear();
+        document.getElementById('normal-actions').style.display = 'none';
+        document.getElementById('delete-actions').style.display = 'none';
+        document.getElementById('edit-actions').style.display = 'flex';
+        renderSubjects(document.getElementById('search-input').value);
+    }
+    
+    function cancelModes() {
+        opMode = 'normal';
+        selectedSubjects.clear();
+        document.getElementById('delete-actions').style.display = 'none';
+        document.getElementById('edit-actions').style.display = 'none';
+        document.getElementById('normal-actions').style.display = 'flex';
+        renderSubjects(document.getElementById('search-input').value);
+    }
+
+    function handleSubjectClick(sIdx) {
+        if(opMode === 'delete') {
+            if(selectedSubjects.has(sIdx)) selectedSubjects.delete(sIdx);
+            else selectedSubjects.add(sIdx);
+            renderSubjects(document.getElementById('search-input').value);
+        } else if (opMode === 'edit') {
+            // Open rename modal
+            let data = getSubjects();
+            document.getElementById('edit-sub-idx').value = sIdx;
+            document.getElementById('edit-subj-name').value = data[sIdx].name;
+            document.getElementById('editSubjectNameModal').style.display = 'flex';
+        }
+    }
+
+    /* Delete Selected Logic */
+    function triggerDeleteConfirmation() {
+        if(selectedSubjects.size === 0) return customAlert("Select at least one subject to delete.");
+        
+        customConfirm(`Are you sure you want to delete ${selectedSubjects.size} subject(s)?\n\nThis will remove all associated classes and sections. This action cannot be undone.`, function() {
+            let subjects = getSubjects();
+            let sortedIndices = Array.from(selectedSubjects).sort((a,b) => b-a);
+            sortedIndices.forEach(idx => {
+                subjects.splice(idx, 1);
+            });
+            localStorage.setItem('mySubjectsData', JSON.stringify(subjects));
+            cancelModes();
+        }, "Delete Subjects", "#ef4444", "Delete Permanently");
+    }
+    
+    /* Edit Subject Rename Logic */
+    function saveSubjectName() {
+        let sIdx = document.getElementById('edit-sub-idx').value;
+        let newName = document.getElementById('edit-subj-name').value.trim();
+        if(!newName) return customAlert("Subject name cannot be bare.");
+        
+        let subjects = getSubjects();
+        subjects[sIdx].name = newName;
+        localStorage.setItem('mySubjectsData', JSON.stringify(subjects));
+        closeModal();
+        cancelModes(); // reset out of edit mode after 1 change, or could stay. stay for now.
+    }
+
+    function searchClasses() {
+        const val = document.getElementById('search-input').value;
+        renderSubjects(val);
+    }
+
+    function closeModal() {
+        document.getElementById('addSubjectModal').style.display = 'none';
+        document.getElementById('editSubjectNameModal').style.display = 'none';
+    }
+
+    /* Section Add/Edit/Delete */
+    function openAddModal() {
+        document.getElementById('modal-sec-title').innerText = "Add Class Section";
+        document.getElementById('modal-idx').value = "-1";
+        document.getElementById('modal-sub-idx').value = "-1";
+        document.getElementById('modal-subj').value = "";
+        document.getElementById('modal-edp').value = "";
+        document.getElementById('modal-sched').value = "";
+        document.getElementById('modal-room').value = "";
+        document.getElementById('modal-sec').value = "";
+        document.getElementById('addSubjectModal').style.display = 'flex';
+    }
+    
+    function editSection(sIdx, idx) {
+        let data = getSubjects();
+        let subj = data[sIdx];
+        let sec = subj.sections[idx];
+        
+        document.getElementById('modal-sec-title').innerText = "Edit Class Section";
+        document.getElementById('modal-idx').value = sIdx;
+        document.getElementById('modal-sub-idx').value = idx;
+        document.getElementById('modal-subj').value = subj.name;
+        document.getElementById('modal-edp').value = sec.edp;
+        document.getElementById('modal-sched').value = sec.schedule;
+        document.getElementById('modal-room').value = sec.room;
+        document.getElementById('modal-sec').value = sec.section;
+        
+        document.getElementById('addSubjectModal').style.display = 'flex';
+    }
+    
+    function deleteSection(sIdx, idx) {
+        customConfirm('Delete this isolated section row permanently?', function() {
+            let data = getSubjects();
+            data[sIdx].sections.splice(idx, 1);
+            if(data[sIdx].sections.length === 0) data.splice(sIdx, 1);
+            localStorage.setItem('mySubjectsData', JSON.stringify(data));
+            renderSubjects(document.getElementById('search-input').value);
+        }, "Confirm Deletion", "#ef4444", "Delete Section");
+    }
+
+    function saveSection() {
+        let name = document.getElementById('modal-subj').value.trim();
+        let edp = document.getElementById('modal-edp').value.trim();
+        let schedule = document.getElementById('modal-sched').value.trim();
+        let room = document.getElementById('modal-room').value.trim();
+        let section = document.getElementById('modal-sec').value.trim();
+        
+        if(!name || !edp) return customAlert('Subject Name and EDP Code are required');
+        
+        let data = getSubjects();
+        let sIdx = parseInt(document.getElementById('modal-idx').value);
+        let idx = parseInt(document.getElementById('modal-sub-idx').value);
+        
+        if(sIdx >= 0 && idx >= 0) {
+            data[sIdx].name = name;
+            data[sIdx].sections[idx] = { edp, schedule, room, section, students: data[sIdx].sections[idx].students };
+        } else {
+            let existingSubj = data.find(s => s.name.toLowerCase() === name.toLowerCase());
+            if(existingSubj) existingSubj.sections.push({ edp, schedule, room, section, students: 0 });
+            else data.push({ name: name, sections: [{ edp, schedule, room, section, students: 0 }]});
+        }
+        
+        localStorage.setItem('mySubjectsData', JSON.stringify(data));
+        closeModal();
+        renderSubjects(document.getElementById('search-input').value);
+    }
+
+    // On load check for search query params
+    document.addEventListener("DOMContentLoaded", function() {
+        const urlParams = new URLSearchParams(window.location.search);
+        const searchVal = urlParams.get('search');
+        if (searchVal) {
+            document.getElementById('search-input').value = searchVal;
+            searchClasses();
+        } else {
+            renderSubjects();
+        }
+    });
+</script>
+{% endblock %}

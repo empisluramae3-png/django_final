@@ -1,0 +1,559 @@
+{% extends 'base.html' %}
+
+{% block head %}
+<style>
+    .breadcrumb { display: flex; align-items: center; gap: 8px; color: #aaa; margin-bottom: 25px; font-weight: 600; font-size: 0.9rem; }
+    .breadcrumb span { color: #fff; }
+    
+    .subject-info { margin-bottom: 25px; }
+    .subject-info h1 { margin: 0; font-size: 2rem; display: flex; align-items: center; gap: 15px; }
+    .subject-info .subtitle { font-size: 0.9rem; color: #fff; font-weight: 600; margin-top: 5px; }
+
+    .tabs-container { margin-bottom: -2px; display: flex; padding-left: 20px; }
+    .tab-btn {
+        background: transparent; color: #aaa; border: 1px solid transparent; border-bottom: none;
+        padding: 10px 20px; font-size: 0.9rem; font-weight: 600; cursor: pointer; border-radius: 8px 8px 0 0;
+    }
+    .tab-btn.active { background: #3b71ca; color: white; border-color: #3b71ca; }
+
+    .record-card { border: 2px solid #3b71ca; border-radius: 12px; background: #18181A; padding: 20px; min-height: 400px; }
+    
+    .attendance-controls { display: flex; justify-content: space-between; align-items: flex-end; margin-bottom: 20px; }
+    
+    .date-row { display: flex; align-items: center; gap: 10px; margin-bottom: 15px; }
+    .date-input-wrap { border: 1px solid #555; border-radius: 8px; padding: 5px 10px; display: flex; align-items: center; gap: 8px; background: #111; }
+    .date-input-wrap input { background: transparent; border: none; color: white; outline: none; font-family: inherit; font-size: 0.9rem; }
+    .date-input-wrap input::-webkit-calendar-picker-indicator { filter: invert(1); cursor: pointer; }
+
+    .summary-stats { display: flex; gap: 15px; font-size: 0.85rem; font-weight: 600; }
+    .stat-item { display: flex; align-items: center; gap: 5px; }
+    .stat-circle { width: 12px; height: 12px; border-radius: 50%; }
+    
+    .c-P { background-color: #4ade80; color: #000; }
+    .c-A { background-color: #ef4444; color: #fff; }
+    .c-L { background-color: #eab308; color: #000; }
+    .c-E { background-color: #06b6d4; color: #000; }
+    .c-notmarked { background-color: #444; color: #ccc; }
+
+    .btn-pill {
+        padding: 8px 18px; border-radius: 30px; font-size: 0.9rem; font-weight: 600; color: white; border: none; cursor: pointer; transition: 0.2s;
+    }
+    .btn-blue { background: #3b71ca; }
+    .btn-blue:hover { background: #2a58a6; }
+    .btn-delete-pill { background-color: #ef4444; }
+    
+    /* Recording Mode Bar */
+    .recording-bar { 
+        display: none; align-items: center; justify-content: space-between; background: #fef3c7; color: #92400e;
+        padding: 10px 20px; border-radius: 8px; margin-bottom: 20px; font-weight: 600; font-size: 0.9rem;
+    }
+    .recording-bar .right-actions { display: flex; gap: 10px; align-items: center; }
+    .btn-all-present { background: #dcfce7; color: #166534; border: 1px solid #22c55e; border-radius: 20px; padding: 4px 15px; cursor: pointer; font-weight: 600; }
+    .btn-save-record { background: #3b71ca; color: white; border: none; border-radius: 20px; padding: 4px 15px; cursor: pointer; font-weight: 600; }
+    .btn-cancel-record { background: transparent; color: #555; border: none; cursor: pointer; font-weight: 600; }
+
+    /* Table */
+    .excel-table { width: 100%; border-collapse: collapse; }
+    .excel-table th, .excel-table td { border: 1px solid #444; padding: 10px; text-align: center; }
+    .excel-table th { background: transparent; color: #fff; font-weight: 600; font-size: 0.85rem; }
+    .excel-table td { padding: 8px; }
+    
+    .text-left { text-align: left !important; padding-left: 15px !important; }
+
+    /* Progress bar */
+    .progress-wrap { background: #333; border-radius: 10px; height: 18px; width: 80px; position: relative; overflow: hidden; display: inline-block; vertical-align: middle; }
+    .progress-fill { height: 100%; display: flex; align-items: center; justify-content: center; font-size: 0.65rem; font-weight: bold; color: #000; }
+    
+    /* Clickable attendance box */
+    .att-box {
+        display: inline-flex; align-items: center; justify-content: center;
+        width: 32px; height: 32px; border-radius: 6px; font-weight: 700; font-size: 0.9rem;
+        user-select: none;
+    }
+    .att-box.recordable { cursor: pointer; }
+    .att-box.recordable:hover { opacity: 0.8; }
+    
+    .highlight-search { animation: searchFlash 2.5s forwards; }
+    @keyframes searchFlash {
+        0% { background-color: rgba(59, 113, 202, 0.6); }
+        100% { background-color: transparent; }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="breadcrumb">
+    <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2" fill="none"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path></svg>
+    <a href="/subjects/" style="color:#aaa; text-decoration:none;">Classes</a> &gt; 
+    <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2" fill="none"><path d="M14 2H6a2 2 0 0 0-2 2v16c0 1.1.9 2 2 2h12a2 2 0 0 0 2-2V8l-6-6z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>
+    <span id="bc-title">Attendance</span>
+</div>
+
+<div class="search-row" style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
+    <div class="subject-info" style="margin-bottom:0;">
+        <h1><span id="hdr-subj">IT IPT</span></h1>
+        <div class="subtitle">Section : <span id="hdr-sec">1</span></div>
+    </div>
+    <div style="display:flex; gap:10px;">
+        <input type="text" id="class-search" class="search-input" style="width:250px;" placeholder="Search student name..." onkeyup="searchStudent()">
+        <button class="btn btn-blue" onclick="searchStudent()">Search</button>
+    </div>
+</div>
+
+<div class="tabs-container">
+    <button class="tab-btn" id="tab-record" onclick="switchTab('record')">Class Record</button>
+    <button class="tab-btn active" id="tab-attendance">Attendance</button>
+</div>
+
+<div class="record-card">
+    <div class="attendance-controls" id="normal-controls">
+        <div>
+            <div class="date-row">
+                <div class="date-input-wrap">
+                    <input type="date" id="att-date" onchange="updateSummary()">
+                    <input type="time" id="att-time" value="07:30" style="padding-left:10px; border-left:1px solid #555;">
+                </div>
+            </div>
+            <div class="summary-stats">
+                <div class="stat-item"><div class="stat-circle c-P"></div> Present: <span id="sum-p">0</span></div>
+                <div class="stat-item"><div class="stat-circle c-A"></div> Absent: <span id="sum-a">0</span></div>
+                <div class="stat-item"><div class="stat-circle c-L"></div> Late: <span id="sum-l">0</span></div>
+                <div class="stat-item"><div class="stat-circle c-E"></div> Excuse: <span id="sum-e">0</span></div>
+            </div>
+        </div>
+        <div style="display:flex; gap:10px; align-items:center;">
+            <button class="btn-pill btn-delete-pill" id="btn-del-mode" onclick="toggleDeleteMode()">Delete</button>
+            <button class="btn-pill btn-blue" onclick="startRecording()">+ Mark Attendance</button>
+        </div>
+    </div>
+    
+    <div id="mode-instructions" style="display:none; color:#ef4444; font-weight:600; font-size:0.9rem; justify-content:space-between; align-items:center; margin-bottom: 20px;">
+        <div>Click a date column header to delete its attendance record.</div>
+        <button class="btn-pill" style="border:1px solid #555; background:transparent; color:#fff;" onclick="cancelModes()">Cancel</button>
+    </div>
+    
+    <div class="recording-bar" id="recording-bar">
+        <div style="display:flex; align-items:center; gap:10px;">
+            <div style="width:12px; height:12px; background:#f59e0b; border-radius:50%; animation:pulse 1s infinite alternate;"></div>
+            Recording attendance... <span id="not-marked-count" style="margin-left:10px; color:#555;">0 not marked</span>
+        </div>
+        <div class="right-actions">
+            <button class="btn-all-present" onclick="markAllPresent()">✓ All Present</button>
+            <button class="btn-cancel-record" onclick="cancelRecording()">Cancel</button>
+            <button class="btn-save-record" onclick="saveRecording()">✓ Save</button>
+        </div>
+    </div>
+
+    <div style="overflow-x:auto;">
+        <table class="excel-table">
+            <thead id="att-header">
+                <!-- Dynamically injected -->
+            </thead>
+            <tbody id="att-body">
+                <!-- Dynamically injected -->
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    // URL Params
+    const urlParams = new URLSearchParams(window.location.search);
+    const subjParam = urlParams.get('subj') || "IT IPT";
+    const secParam = urlParams.get('sec') || "1";
+    const schParam = urlParams.get('sch') || "";
+    
+    document.getElementById('hdr-subj').innerText = subjParam;
+    if(document.getElementById('hdr-sch')) {
+        document.getElementById('hdr-sch').innerText = schParam;
+    }
+    document.getElementById('hdr-sec').innerText = secParam;
+    
+    // Set today locally as default in date picker
+    document.getElementById('att-date').value = new Date().toISOString().split('T')[0];
+
+    function switchTab(tab) {
+        if (tab === 'record') {
+            window.location.href = `/subject/1/?subj=${encodeURIComponent(subjParam)}&sec=${encodeURIComponent(secParam)}&sch=${encodeURIComponent(schParam)}`;
+        }
+    }
+    
+    // Globals
+    let Students = [];
+    let AttDates = []; // e.g. { id: '2026-04-10||07:30', date: '2026-04-10', time: '07:30', display: 'Fri April 10<br>7:30 AM' }
+    let AttData = {}; // "Lastname, Firstname" -> { "id": "P" }
+    let isRecording = false;
+    let isDeleting = false;
+    let recordingDateId = null; 
+    let tempRecordingData = {}; // temporary state while recording before save
+    
+    function loadData() {
+        let studentsList = JSON.parse(localStorage.getItem('studentsList') || '[]');
+        let targetSecClean = secParam.replace(/section\s+/i, '').trim();
+        Students = studentsList
+            .filter(s => {
+                let sSec = (s.section || '').replace(/section\s+/i, '').trim();
+                return sSec === targetSecClean;
+            })
+            .sort((a,b) => (a.name || '').localeCompare(b.name || ''));
+            
+        AttDates = JSON.parse(localStorage.getItem(`attDates_${subjParam}_${secParam}`) || '[]');
+        AttData = JSON.parse(localStorage.getItem(`attData_${subjParam}_${secParam}`) || '{}');
+        
+        renderTable();
+        updateSummary();
+    }
+    
+    function commitData() {
+        localStorage.setItem(`attDates_${subjParam}_${secParam}`, JSON.stringify(AttDates));
+        localStorage.setItem(`attData_${subjParam}_${secParam}`, JSON.stringify(AttData));
+    }
+
+    function searchStudent() {
+        const query = document.getElementById('class-search').value.toLowerCase().trim();
+        document.querySelectorAll('.highlight-search').forEach(el => el.classList.remove('highlight-search'));
+        if(!query) return;
+
+        const rows = document.querySelectorAll('#att-body tr');
+        for(let row of rows) {
+            let name = row.getAttribute('data-name');
+            if(name && name.toLowerCase().includes(query)) {
+                row.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                row.classList.add('highlight-search');
+                break;
+            }
+        }
+    }
+
+    function renderTable() {
+        const header = document.getElementById('att-header');
+        const body = document.getElementById('att-body');
+        
+        let headerHtml = `
+            <tr>
+                <th class="text-left" style="width:220px;">Student A-Z</th>
+                <th style="width:100px;">Attendance</th>
+                <th style="width:40px; color:#ef4444;">X</th>
+                <th style="width:40px; color:#eab308;">
+                    <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2" fill="none"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
+                </th>
+        `;
+        
+        AttDates.forEach(d => {
+            let selectedVisual = (!isRecording && !isDeleting && d.date === document.getElementById('att-date').value) ? 'border-bottom: 3px solid #3b71ca;' : '';
+            let cursorStyle = isDeleting ? 'cursor:pointer; color:#ef4444; text-decoration:underline;' : '';
+            headerHtml += `<th style="background:#222; ${selectedVisual} ${cursorStyle}" onclick="handleColClick('${d.id}')">
+                <div style="font-size:0.75rem; color:#aaa;">${d.display}</div>
+            </th>`;
+        });
+        
+        // Add recording column if active
+        if (isRecording && !AttDates.find(d => d.id === recordingDateId)) {
+            // New column visually inserted
+            headerHtml += `<th style="background:#3b71ca; color:white;">
+                <div style="font-size:0.75rem;">Recording...<br>New Date</div>
+            </th>`;
+        }
+        headerHtml += `</tr>`;
+        header.innerHTML = headerHtml;
+        
+        let bodyHtml = '';
+        Students.forEach(s => {
+            let sName = s.name;
+            let stats = calculateStats(sName);
+            
+            // Progress Bar Formatting
+            let progColor = '#4ade80'; // Green
+            if (stats.pct < 75) progColor = '#ef4444'; // At Risk
+            let progText = stats.totalRuns === 0 ? '-' : Math.round(stats.pct) + '%';
+            
+            let htmlRow = `<tr data-name="${sName}">`;
+            htmlRow += `<td class="text-left" style="font-weight:600;">${sName}</td>`;
+            htmlRow += `<td>
+                <div class="progress-wrap" title="${progText}">
+                    <div class="progress-fill" style="width:${stats.totalRuns===0 ? 0 : stats.pct}%; background:${progColor}; ${stats.pct < 50 ? 'color:white;' : ''}">${progText}</div>
+                </div>
+            </td>`;
+            htmlRow += `<td style="color:#ef4444; font-weight:bold;">${stats.A > 0 ? stats.A : ''}</td>`;
+            htmlRow += `<td style="color:#eab308; font-weight:bold;">${stats.L > 0 ? stats.L : ''}</td>`;
+            
+            AttDates.forEach(d => {
+                let status = (AttData[sName] && AttData[sName][d.id]) ? AttData[sName][d.id] : '';
+                let isEditingThis = (isRecording && d.id === recordingDateId);
+                
+                if (isEditingThis) {
+                    status = (tempRecordingData[sName] !== undefined) ? tempRecordingData[sName] : '';
+                    htmlRow += `<td style="background:rgba(254, 243, 199, 0.1);">
+                        ${renderInteractiveBox(sName, status)}
+                    </td>`;
+                } else {
+                    htmlRow += `<td>${renderStaticBox(status)}</td>`;
+                }
+            });
+            
+            if (isRecording && !AttDates.find(d => d.id === recordingDateId)) {
+                let status = tempRecordingData[sName] || '';
+                htmlRow += `<td style="background:rgba(254, 243, 199, 0.1);">
+                    ${renderInteractiveBox(sName, status)}
+                </td>`;
+            }
+            
+            htmlRow += `</tr>`;
+            bodyHtml += htmlRow;
+        });
+        
+        if(Students.length === 0) {
+            let clsp = 4 + AttDates.length + (isRecording ? 1 : 0);
+            bodyHtml += `<tr><td colspan="${clsp}" style="padding:20px; color:#aaa;">No students found in this section. Add some from the My Students page.</td></tr>`;
+        }
+        body.innerHTML = bodyHtml;
+        
+        updateNotMarkedCount();
+        checkAtRisk();
+    }
+    
+    function renderStaticBox(status) {
+        if(!status) return `<div class="att-box" style="border: 1px solid #444; color:#555;">-</div>`;
+        return `<div class="att-box c-${status}">${status}</div>`;
+    }
+    
+    function renderInteractiveBox(sName, status) {
+        if(!status) status = '-';
+        let cls = status === '-' ? 'c-notmarked' : 'c-' + status;
+        return `<div class="att-box recordable ${cls}" onclick="cycleStatus('${sName}')">${status}</div>`;
+    }
+
+    function cycleStatus(sName) {
+        if(!isRecording) return;
+        const cycles = ['-', 'P', 'A', 'L', 'E'];
+        let curr = tempRecordingData[sName] || '-';
+        let idx = cycles.indexOf(curr);
+        let nxt = cycles[(idx + 1) % cycles.length];
+        
+        tempRecordingData[sName] = nxt;
+        renderTable(); 
+    }
+    
+    function markAllPresent() {
+        if(!isRecording) return;
+        Students.forEach(s => {
+            if(!tempRecordingData[s.name] || tempRecordingData[s.name] === '-') {
+                tempRecordingData[s.name] = 'P';
+            }
+        });
+        renderTable();
+    }
+    
+    function updateNotMarkedCount() {
+        if(!isRecording) return;
+        let c = 0;
+        Students.forEach(s => {
+            if(!tempRecordingData[s.name] || tempRecordingData[s.name] === '-') c++;
+        });
+        let span = document.getElementById('not-marked-count');
+        if(span) {
+            if (c === 0) span.innerHTML = `<span style="color:#166534; font-weight:bold;">All marked!</span>`;
+            else span.innerText = `${c} not marked`;
+        }
+    }
+    
+    function calculateStats(sName) {
+        let stuData = AttData[sName] || {};
+        let stats = { P: 0, A: 0, L: 0, E: 0, totalRuns: AttDates.length };
+        
+        AttDates.forEach(d => {
+            let v = stuData[d.id];
+            if(v === 'P') stats.P++;
+            if(v === 'A') stats.A++;
+            if(v === 'L') stats.L++;
+            if(v === 'E') stats.E++;
+        });
+        
+        // P=1, E=1, L=0.5, A=0 
+        let earned = stats.P + stats.E + (stats.L * 0.5);
+        let pct = stats.totalRuns === 0 ? 100 : (earned / stats.totalRuns) * 100;
+        stats.pct = pct;
+        return stats;
+    }
+    
+    function updateSummary() {
+        if(isRecording) return;
+        const targetDate = document.getElementById('att-date').value;
+        let targetId = null;
+        // See if a date in AttDates matches this date
+        let matches = AttDates.filter(d => d.date === targetDate);
+        if(matches.length > 0) targetId = matches[matches.length - 1].id; // use latest if multiple on same day
+        
+        let p=0, a=0, l=0, e=0;
+        if(targetId) {
+            Students.forEach(s => {
+                let v = (AttData[s.name] && AttData[s.name][targetId]) || '-';
+                if(v === 'P') p++;
+                if(v === 'A') a++;
+                if(v === 'L') l++;
+                if(v === 'E') e++;
+            });
+        }
+        
+        document.getElementById('sum-p').innerText = p;
+        document.getElementById('sum-a').innerText = a;
+        document.getElementById('sum-l').innerText = l;
+        document.getElementById('sum-e').innerText = e;
+        
+        renderTable(); // Triggers underline on matched date col
+    }
+    
+    function toggleDeleteMode() {
+        if(isRecording) return;
+        isDeleting = true;
+        document.getElementById('normal-controls').style.display = 'none';
+        document.getElementById('mode-instructions').style.display = 'flex';
+        renderTable();
+    }
+    
+    function cancelModes() {
+        isDeleting = false;
+        document.getElementById('mode-instructions').style.display = 'none';
+        document.getElementById('normal-controls').style.display = 'flex';
+        renderTable();
+    }
+    
+    function handleColClick(dateId) {
+        if (!isDeleting) return;
+        const dObj = AttDates.find(d => d.id === dateId);
+        if (!dObj) return;
+        
+        customConfirm(`Are you sure you want to delete the attendance record for ${dObj.display.replace('<br>', ' ')}?`, function() {
+            // Remove from array
+            AttDates = AttDates.filter(d => d.id !== dateId);
+            // Remove from each student's data
+            Students.forEach(s => {
+                if(AttData[s.name] && AttData[s.name][dateId]) {
+                    delete AttData[s.name][dateId];
+                }
+            });
+            commitData();
+            updateSummary();
+        }, "Delete Record", "#ef4444", "Delete Permanently");
+    }
+
+    function startRecording() {
+        const adate = document.getElementById('att-date').value;
+        const atime = document.getElementById('att-time').value;
+        if(!adate || !atime) return customAlert("Please choose Date and Time before marking attendance.");
+        
+        const id = `${adate}||${atime}`;
+        
+        isRecording = true;
+        recordingDateId = id;
+        tempRecordingData = {};
+        
+        // populate temp with existing if editing
+        if(AttDates.find(d => d.id === id)) {
+            Students.forEach(s => {
+                tempRecordingData[s.name] = (AttData[s.name] && AttData[s.name][id]) || '-';
+            });
+        }
+        
+        document.getElementById('normal-controls').style.display = 'none';
+        document.getElementById('recording-bar').style.display = 'flex';
+        renderTable();
+    }
+    
+    function cancelRecording() {
+        isRecording = false;
+        recordingDateId = null;
+        tempRecordingData = {};
+        document.getElementById('normal-controls').style.display = 'flex';
+        document.getElementById('recording-bar').style.display = 'none';
+        renderTable();
+    }
+    
+    function saveRecording() {
+        // Validate if there's any not marked
+        let hasNotMarked = false;
+        Students.forEach(s => {
+            if(!tempRecordingData[s.name] || tempRecordingData[s.name] === '-') {
+                hasNotMarked = true;
+            }
+        });
+        
+        if (hasNotMarked) {
+            return customAlert("Please ensure all students are marked before saving. Use the 'All Present' button to speed this up!", "Incomplete");
+        }
+        
+        // Ensure date exists
+        let exists = AttDates.find(d => d.id === recordingDateId);
+        if(!exists) {
+            let dObj = new Date(recordingDateId.split('||')[0]);
+            let dayName = dObj.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
+            
+            // convert 24h to 12h
+            let timeStr = recordingDateId.split('||')[1];
+            let [h, m] = timeStr.split(':');
+            let hN = parseInt(h);
+            let ampm = hN >= 12 ? 'PM' : 'AM';
+            let th = hN % 12 || 12;
+            
+            AttDates.push({
+                id: recordingDateId,
+                date: recordingDateId.split('||')[0],
+                time: timeStr,
+                display: `${dayName}<br>${th}:${m} ${ampm}`
+            });
+        }
+        
+        // Apply changes
+        Students.forEach(s => {
+            if(!AttData[s.name]) AttData[s.name] = {};
+            let val = tempRecordingData[s.name];
+            if (val && val !== '-') {
+                AttData[s.name][recordingDateId] = val;
+            }
+        });
+        
+        commitData();
+        cancelRecording(); // exits recording mode and re-renders
+        updateSummary();
+    }
+
+    function checkAtRisk() {
+        if (isRecording) return; // Wait til finished recording
+        let atRiskUsers = [];
+        Students.forEach(s => {
+            let st = calculateStats(s.name);
+            if (st.pct < 75 && st.totalRuns > 0) { // Below 75% attendance flag
+                atRiskUsers.push({
+                    name: s.name,
+                    subject: subjParam,
+                    section: secParam,
+                    reason: `Critical Attendance (${Math.round(st.pct)}%)`
+                });
+            }
+        });
+        
+        // Merge into global atRisk list
+        let globalAtRisk = JSON.parse(localStorage.getItem('atRiskStudents') || '[]');
+        // clear old entries for this subject and section that are related to attendance
+        globalAtRisk = globalAtRisk.filter(u => !(u.subject === subjParam && u.section === secParam && u.reason.includes('Attendance')));
+        
+        globalAtRisk.push(...atRiskUsers);
+        localStorage.setItem('atRiskStudents', JSON.stringify(globalAtRisk));
+    }
+
+    // Startup
+    loadData();
+
+    // Utility: Adding pulse animation specifically needed by design 
+    const style = document.createElement('style');
+    style.innerHTML = `
+        @keyframes pulse {
+            0% { transform: scale(1); opacity: 1; }
+            100% { transform: scale(1.2); opacity: 0.7; }
+        }
+    `;
+    document.head.appendChild(style);
+</script>
+{% endblock %}

@@ -1,0 +1,233 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<style>
+    .page-header { display: flex; justify-content: space-between; align-items: flex-end; margin-bottom: 30px; }
+    .header-left { display: flex; align-items: center; gap: 15px; margin-bottom: 5px; }
+    .header-left svg { color: #EAB308; }
+    .header-left h1 { margin: 0; font-size: 2.2rem; letter-spacing: 1px; color: #EAB308; }
+    .page-header h3 { margin: 0; }
+    
+    .search-row { display: flex; gap: 10px; margin-bottom: 25px; }
+    .search-input { flex: 1; padding: 10px 15px; border-radius: 6px; border: 1px solid #444; background: transparent; color: white; font-family: inherit; }
+    
+    .filter-bar { padding: 15px 20px; border-bottom: 1px solid #333; display: flex; align-items: center; gap: 10px; background: rgba(0,0,0,0.2); }
+    .filter-select { background: transparent; color: white; border: 1px solid #555; padding: 8px 15px; border-radius: 4px; font-family: inherit; min-width: 200px; cursor: pointer; }
+    
+    /* Highlight class for searched rows */
+    .highlight-row { animation: highlightAnim 2s forwards; }
+    @keyframes highlightAnim {
+        0% { background-color: rgba(234, 179, 8, 0.4); }
+        100% { background-color: transparent; }
+    }
+</style>
+
+<div class="page-header">
+    <div>
+        <div class="header-left">
+            <svg viewBox="0 0 24 24" width="36" height="36" fill="currentColor" stroke="none"><path d="M12 2L1 21h22L12 2zM11 16h2v2h-2v-2zm0-7h2v5h-2V9z"></path></svg>
+            <h1>At-Risk Students</h1>
+        </div>
+        <h3 id="risk-subtitle">These students are consistently failing or absent on classes</h3>
+    </div>
+    
+    <div class="action-buttons">
+        <button class="btn" onclick="history.back()" style="display:flex; align-items:center; gap:5px; background:transparent; border:1px solid #4a6cff; color:#fff;"><svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" fill="none"><polyline points="15 18 9 12 15 6"></polyline></svg> Back</button>
+    </div>
+</div>
+
+<div class="search-row">
+    <input type="text" id="search-input" class="search-input" placeholder="Search by student name, subject, or section...">
+    <button class="btn btn-blue" onclick="performSearch()">Search</button>
+</div>
+
+<div class="card card-blue" style="padding: 0; overflow:hidden;">
+    <div class="filter-bar">
+        <span style="font-weight:600; color:#aaa;">Filter:</span>
+        <select id="subject-filter" class="filter-select" onchange="performSearch()">
+            <option value="all">All Subjects</option>
+            <!-- Populated by JS -->
+        </select>
+    </div>
+    <table class="data-table">
+        <thead>
+            <tr>
+                <th>Name</th>
+                <th>Subject</th>
+                <th>Section</th>
+                <th>Grade Status</th>
+                <th>Attendance Status</th>
+                <th>Go to Class</th>
+            </tr>
+        </thead>
+        <tbody id="risk-table-body">
+            <!-- Populated by JS -->
+        </tbody>
+    </table>
+</div>
+
+<script>
+    // System automatically generates these mappings based on mocked active environments for demonstration
+    let riskDatabase = [];
+
+    function gatherRiskData() {
+        riskDatabase = [];
+        let riskMap = {}; // Keyed by: name|subject|section
+        
+        let subjectsData = JSON.parse(localStorage.getItem('mySubjectsData') || '[]');
+        let allStudents = JSON.parse(localStorage.getItem('studentsList') || '[]');
+        
+        subjectsData.forEach(subj => {
+            if(subj.sections) {
+                subj.sections.forEach(sec => {
+                    let secName = sec.section;
+                    let targetSec = secName.replace(/section\s+/i, '').trim();
+                    let tasks = JSON.parse(localStorage.getItem(`tasks_${subj.name}_${secName}`) || '[]');
+                    let gradesData = JSON.parse(localStorage.getItem(`grades_${subj.name}_${secName}`) || '{}');
+                    
+                    let secStudents = allStudents.filter(s => {
+                        let sSec = (s.section || '').replace(/section\s+/i, '').trim();
+                        return sSec === targetSec;
+                    });
+                    
+                    secStudents.forEach(st => {
+                        let grades = gradesData[st.name] || {};
+                        let totalWeighted = 0; let possibleWeight = 0; let hasGrades = false;
+                        tasks.forEach(t => {
+                            let score = parseFloat(grades[t.id]);
+                            if (!isNaN(score)) {
+                                hasGrades = true;
+                                let max = parseFloat(t.max) || 100;
+                                let weight = parseFloat(t.weight) || 0;
+                                totalWeighted += (score / max) * weight;
+                                possibleWeight += weight;
+                            }
+                        });
+                        
+                        if (hasGrades && possibleWeight > 0) {
+                            let percentage = (totalWeighted/possibleWeight) * 100;
+                            let gradePoint = 5.0;
+                            if (percentage >= 95) gradePoint = 1.0;
+                            else if (percentage >= 90) gradePoint = 1.5;
+                            else if (percentage >= 85) gradePoint = 2.0;
+                            else if (percentage >= 80) gradePoint = 2.5;
+                            else if (percentage >= 75) gradePoint = 3.0;
+                            else gradePoint = 5.0;
+                            
+                            if (gradePoint >= 3.0) {
+                                let key = `${st.name}|${subj.name}|${targetSec}`;
+                                if (!riskMap[key]) {
+                                    riskMap[key] = {
+                                        name: st.name, subject: subj.name, section: secName, gradeWarn: '', attWarn: ''
+                                    };
+                                }
+                                riskMap[key].gradeWarn = `Overall Grade: ${gradePoint.toFixed(1)}`;
+                            }
+                        }
+                    });
+                });
+            }
+        });
+        
+        let globalAtRisk = JSON.parse(localStorage.getItem('atRiskStudents') || '[]');
+        globalAtRisk.forEach(g => {
+            let key = `${g.name}|${g.subject}|${g.section}`;
+            if (!riskMap[key]) {
+                riskMap[key] = {
+                    name: g.name, subject: g.subject, section: g.section, gradeWarn: '', attWarn: ''
+                };
+            }
+            riskMap[key].attWarn = g.reason;
+        });
+        
+        // Convert map to array
+        for (let key in riskMap) {
+            riskDatabase.push(riskMap[key]);
+        }
+    }
+
+    function initFilterDropdown() {
+        gatherRiskData();
+        let subjectsData = JSON.parse(localStorage.getItem('mySubjectsData') || '[]');
+        let select = document.getElementById('subject-filter');
+        select.innerHTML = `<option value="all">All Subjects</option>`;
+        
+        // Use a set to avoid dups if subjectsData occurs
+        let loaded = new Set();
+        subjectsData.forEach(subj => {
+            if(!loaded.has(subj.name)) {
+                select.innerHTML += `<option value="${subj.name}">${subj.name}</option>`;
+                loaded.add(subj.name);
+            }
+        });
+        
+        if(riskDatabase.length === 0) {
+            document.getElementById('risk-subtitle').innerText = "All students are performing well. No risks detected.";
+        } else {
+            document.getElementById('risk-subtitle').innerText = "These students are currently at risk based on their grades.";
+        }
+        
+        performSearch();
+    }
+
+    function renderTable(data, highlightMatch = "") {
+        let body = document.getElementById('risk-table-body');
+        body.innerHTML = '';
+        
+        if(data.length === 0) {
+            body.innerHTML = `<tr><td colspan="6" style="text-align:center; padding:25px; color:#aaa;">No at-risk students found matching parameters.</td></tr>`;
+            return;
+        }
+        
+        data.forEach((row, idx) => {
+            let matchesSearch = highlightMatch && (
+                row.name.toLowerCase().includes(highlightMatch) ||
+                row.subject.toLowerCase().includes(highlightMatch) ||
+                String(row.section).toLowerCase().includes(highlightMatch)
+            );
+            
+            let rowClass = matchesSearch ? "highlight-row" : "";
+            
+            let gw = row.gradeWarn ? `<span style="color:#ef4444; font-weight:600;">${row.gradeWarn}</span>` : `<span style="color:#aaa;">-</span>`;
+            let aw = row.attWarn ? `<span style="color:#ef4444; font-weight:600;">${row.attWarn}</span>` : `<span style="color:#aaa;">-</span>`;
+            
+            body.innerHTML += `
+                <tr class="${rowClass}">
+                    <td style="font-weight:600;">${row.name}</td>
+                    <td>${row.subject}</td>
+                    <td>${row.section}</td>
+                    <td>${gw}</td>
+                    <td>${aw}</td>
+                    <td><a href="/subject/1/?subj=${encodeURIComponent(row.subject)}&sec=${row.section}" class="btn btn-outline-blue" style="padding:4px 12px; font-size:0.8rem; display:inline-flex; align-items:center; gap:5px; text-decoration:none;">View <svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" fill="none"><polyline points="9 18 15 12 9 6"></polyline></svg></a></td>
+                </tr>
+            `;
+        });
+    }
+
+    function performSearch() {
+        const query = document.getElementById('search-input').value.toLowerCase().trim();
+        const subjFilter = document.getElementById('subject-filter').value;
+        
+        let filtered = riskDatabase;
+        if (subjFilter !== 'all') {
+            filtered = filtered.filter(r => r.subject === subjFilter);
+        }
+        
+        let displayData = filtered;
+        if (query) {
+            displayData = filtered.filter(r => 
+                r.name.toLowerCase().includes(query) || 
+                r.subject.toLowerCase().includes(query) || 
+                String(r.section).toLowerCase().includes(query)
+            );
+        }
+        
+        renderTable(displayData, query); 
+    }
+
+    // Run heavily coupled logic exactly on load and when traversing from history
+    window.addEventListener("pageshow", () => {
+        initFilterDropdown();
+    });
+</script>
+{% endblock %}

@@ -1,0 +1,277 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<style>
+    .page-header { display: flex; flex-direction: column; align-items: flex-start; margin-bottom: 30px; }
+    .page-header h1 { margin: 0; font-size: 1.8rem; letter-spacing: 1px; color: #ffffff; }
+    .page-header p { margin: 5px 0 0 0; color: #aaa; font-size: 0.95rem; }
+    
+    .profile-card { background: #18181A; border: 2px solid #3b71ca; border-radius: 12px; padding: 30px; max-width: 700px; transition: 0.3s; }
+    
+    .profile-header { display: flex; align-items: center; gap: 20px; border-bottom: 1px solid #333; padding-bottom: 30px; margin-bottom: 30px; }
+    .avatar-large { width: 80px; height: 80px; background: #3b71ca; color: white; border-radius: 50%; font-size: 2.5rem; font-weight: 700; display: flex; align-items: center; justify-content: center; }
+    .h-info h2 { margin: 0 0 5px 0; font-size: 1.8rem; }
+    .h-info p { margin: 0; color: #aaa; font-size: 0.95rem; }
+    
+    .info-grid, .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 25px; }
+    .info-group, .form-group { display: flex; flex-direction: column; gap: 8px; }
+    .info-group.full, .form-group.full { grid-column: span 2; }
+    
+    .info-group label, .form-group label { font-size: 0.85rem; font-weight: 600; color: #777; text-transform: uppercase; letter-spacing: 1px; }
+    .info-val { font-size: 1.1rem; color: #eee; font-weight: 500; min-height: 1.4rem; }
+    
+    .input-ctrl { background: #111; color: white; border: 1px solid #444; border-radius: 8px; padding: 12px 15px; font-family: inherit; font-size: 0.95rem; transition: 0.2s; }
+    .input-ctrl:focus { outline: none; border-color: #3b71ca; }
+    
+    .action-bar { display: flex; justify-content: space-between; align-items: center; margin-top: 40px; padding-top: 30px; border-top: 1px solid #333; }
+    .btn-dng { background: transparent; border: 1px solid #ef4444; color: #ef4444; padding: 10px 20px; border-radius: 8px; font-weight: 600; cursor: pointer; transition: 0.2s; }
+    .btn-dng:hover { background: rgba(239, 68, 68, 0.1); }
+    
+    .btn-sv, .btn-ed { background: #3b71ca; border: none; color: white; padding: 10px 30px; border-radius: 8px; font-weight: 600; font-size: 1rem; cursor: pointer; transition: 0.2s; display: flex; align-items: center; gap: 8px; }
+    .btn-sv:hover, .btn-ed:hover { background: #2a58a6; }
+    
+    #edit-section { display: none; }
+    #view-section { display: block; }
+</style>
+
+<div class="page-header">
+    <h1>Teacher's Profile</h1>
+    <p>Securely manage your educator identity and academic term details</p>
+</div>
+
+<div class="profile-card">
+    <div class="profile-header">
+        <div class="avatar-large" id="prof-avatar">M</div>
+        <div class="h-info">
+            <h2 id="prof-display-name">Professor Name</h2>
+            <p id="prof-email">teacher@eduladger.com</p>
+        </div>
+    </div>
+    
+    <!-- View Mode Section -->
+    <div id="view-section">
+        <div class="info-grid">
+            <div class="info-group">
+                <label>Full Name</label>
+                <div class="info-val" id="view-name">--</div>
+            </div>
+            <div class="info-group">
+                <label>Role</label>
+                <div class="info-val">Primary Instructor</div>
+            </div>
+            
+            <div class="info-group full" style="margin-top: 15px; border-bottom: 1px solid #333; padding-bottom: 10px;">
+                <h4 style="margin:0; color:#3b71ca;">Academic Context</h4>
+            </div>
+            
+            <div class="info-group">
+                <label>Institution / School</label>
+                <div class="info-val" id="view-school">--</div>
+            </div>
+            <div class="info-group">
+                <label>Academic Year</label>
+                <div class="info-val" id="view-year">--</div>
+            </div>
+            
+            <div class="info-group full">
+                <label>Current Term</label>
+                <div class="info-val" id="view-term">--</div>
+            </div>
+            
+            <div class="info-group">
+                <label>Term Commencement</label>
+                <div class="info-val" id="view-start">--</div>
+            </div>
+            <div class="info-group">
+                <label>Term Completion</label>
+                <div class="info-val" id="view-end">--</div>
+            </div>
+        </div>
+        
+        <div class="action-bar">
+            <button class="btn-dng" onclick="deleteAccount()">Delete Account</button>
+            <button class="btn-ed" onclick="toggleMode('edit')">
+                <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
+                Edit Profile
+            </button>
+        </div>
+    </div>
+
+    <!-- Edit Mode Section -->
+    <div id="edit-section">
+        <div class="form-grid">
+            <div class="form-group">
+                <label>Update Full Name</label>
+                <input type="text" class="input-ctrl" id="prof-name" placeholder="Enter your full name">
+            </div>
+            <div class="form-group">
+                <label>New Password</label>
+                <div style="position: relative;">
+                    <input type="password" class="input-ctrl" id="prof-password" placeholder="Leave blank to keep current" style="width: 100%; box-sizing: border-box; padding-right: 45px;">
+                    <button type="button" onclick="togglePassword()" style="position: absolute; right: 10px; top: 50%; transform: translateY(-50%); background: none; border: none; color: #888; cursor: pointer; padding: 5px; display: flex; align-items: center;">
+                        <svg id="eye-icon" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+                            <circle cx="12" cy="12" r="3"></circle>
+                        </svg>
+                    </button>
+                </div>
+            </div>
+            
+            <div class="form-group full" style="margin-top: 15px; border-bottom: 1px solid #333; padding-bottom: 10px;">
+                <h4 style="margin:0; color:#fff;">Institutional Settings</h4>
+            </div>
+            
+            <div class="form-group">
+                <label>School Name</label>
+                <input type="text" class="input-ctrl" id="prof-school" placeholder="e.g. EDULedger Academy">
+            </div>
+            <div class="form-group">
+                <label>Academic Year</label>
+                <input type="text" class="input-ctrl" id="prof-year" placeholder="e.g. 2025-2026">
+            </div>
+            
+            <div class="form-group full">
+                <label>Academic Term Selection</label>
+                <select class="input-ctrl" id="prof-term">
+                    <option value="">Choose a term...</option>
+                    <option value="Prelim">Prelim</option>
+                    <option value="Midterm">Midterm</option>
+                    <option value="Semi-Final">Semi-Final</option>
+                    <option value="Finals">Finals</option>
+                </select>
+            </div>
+            
+            <div class="form-group">
+                <label>Start Date</label>
+                <input type="date" class="input-ctrl" id="prof-start">
+            </div>
+            <div class="form-group">
+                <label>End Date</label>
+                <input type="date" class="input-ctrl" id="prof-end">
+            </div>
+        </div>
+        
+        <div class="action-bar">
+            <button class="btn-dng" onclick="toggleMode('view')" style="border-color:#555; color:#aaa;">Cancel</button>
+            <button class="btn-sv" onclick="saveProfile()">Save Changes</button>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+    let rawEmail = "";
+    
+    window.addEventListener("pageshow", () => {
+        loadProfileData();
+    });
+
+    function togglePassword() {
+        const passInput = document.getElementById('prof-password');
+        const eyeIcon = document.getElementById('eye-icon');
+        if (passInput.type === 'password') {
+            passInput.type = 'text';
+            eyeIcon.style.color = '#3b71ca'; // active color
+        } else {
+            passInput.type = 'password';
+            eyeIcon.style.color = '#888';
+        }
+    }
+
+    function toggleMode(mode) {
+        if (mode === 'edit') {
+            document.getElementById('view-section').style.display = 'none';
+            document.getElementById('edit-section').style.display = 'block';
+        } else {
+            document.getElementById('edit-section').style.display = 'none';
+            document.getElementById('view-section').style.display = 'block';
+        }
+    }
+
+    function loadProfileData() {
+        const username = localStorage.getItem('username');
+        if(!username) return;
+        rawEmail = username;
+        
+        const userNames = JSON.parse(localStorage.getItem('userNames') || '{}');
+        let display = (userNames[username] && userNames[username].trim() !== '') ? userNames[username] : username.split('@')[0];
+        
+        // Header
+        document.getElementById('prof-display-name').innerText = display;
+        document.getElementById('prof-email').innerText = rawEmail;
+        document.getElementById('prof-avatar').innerText = display.charAt(0).toUpperCase();
+        
+        // View Mode Data
+        document.getElementById('view-name').innerText = userNames[username] || "--";
+        document.getElementById('view-school').innerText = localStorage.getItem('prof_school') || "--";
+        document.getElementById('view-year').innerText = localStorage.getItem('prof_year') || "--";
+        document.getElementById('view-term').innerText = localStorage.getItem('prof_term') || "--";
+        document.getElementById('view-start').innerText = localStorage.getItem('prof_start') || "--";
+        document.getElementById('view-end').innerText = localStorage.getItem('prof_end') || "--";
+
+        // Pre-fill Edit Mode fields
+        document.getElementById('prof-name').value = userNames[username] || "";
+        document.getElementById('prof-school').value = localStorage.getItem('prof_school') || "";
+        document.getElementById('prof-year').value = localStorage.getItem('prof_year') || "";
+        document.getElementById('prof-term').value = localStorage.getItem('prof_term') || "";
+        document.getElementById('prof-start').value = localStorage.getItem('prof_start') || "";
+        document.getElementById('prof-end').value = localStorage.getItem('prof_end') || "";
+    }
+
+    function saveProfile() {
+        let nameField = document.getElementById('prof-name').value.trim();
+        let passField = document.getElementById('prof-password').value.trim();
+        
+        // Save Name
+        if (nameField !== "") {
+            let userNames = JSON.parse(localStorage.getItem('userNames') || '{}');
+            userNames[rawEmail] = nameField;
+            var originalSet = Object.getOwnPropertyDescriptor(Storage.prototype, 'setItem').value;
+            originalSet.call(localStorage, 'userNames', JSON.stringify(userNames));
+        }
+        
+        // Save Password
+        if (passField !== "") {
+            let users = JSON.parse(localStorage.getItem('registeredUsers') || '[]');
+            let userObj = users.find(u => u.email === rawEmail);
+            if(userObj) {
+                userObj.password = passField;
+                var originalSet = Object.getOwnPropertyDescriptor(Storage.prototype, 'setItem').value;
+                originalSet.call(localStorage, 'registeredUsers', JSON.stringify(users));
+            }
+            document.getElementById('prof-password').value = "";
+        }
+        
+        // Save Academic Details
+        localStorage.setItem('prof_school', document.getElementById('prof-school').value.trim());
+        localStorage.setItem('prof_year', document.getElementById('prof-year').value.trim());
+        localStorage.setItem('prof_term', document.getElementById('prof-term').value);
+        localStorage.setItem('prof_start', document.getElementById('prof-start').value);
+        localStorage.setItem('prof_end', document.getElementById('prof-end').value);
+        
+        loadProfileData(); 
+        toggleMode('view'); // CLEAN OUTCOME: Switch to view mode after save
+        
+        // Live updates to sidebar
+        let newDisplay = nameField ? nameField : rawEmail.split('@')[0];
+        document.getElementById('sidebar-name').innerText = newDisplay;
+        document.getElementById('sidebar-initial').innerText = newDisplay.charAt(0).toUpperCase();
+        
+        customAlert("Your Teacher Profile has been successfully updated and saved.", "Profile Updated");
+    }
+
+    function deleteAccount() {
+        customConfirm(`Are you sure you want to permanently delete your teacher account (${rawEmail})? This will wipe all subjects and student records. This is permanent!`, function() {
+            let users = JSON.parse(localStorage.getItem('registeredUsers') || '[]');
+            users = users.filter(u => u.email !== rawEmail);
+            var originalSet = Object.getOwnPropertyDescriptor(Storage.prototype, 'setItem').value;
+            originalSet.call(localStorage, 'registeredUsers', JSON.stringify(users));
+            
+            localStorage.removeItem('username');
+            window.location.href = '/';
+        }, "Final Confirmation", "#ef4444", "Delete Permanently");
+    }
+</script>
+{% endblock %}

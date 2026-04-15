@@ -1,0 +1,481 @@
+{% extends 'base.html' %}
+
+{% block head %}
+<style>
+    .schedule-card {
+        margin-bottom: 25px;
+    }
+    
+    .schedule-grid {
+        display: flex;
+        gap: 0;
+        margin-top: 15px;
+        overflow-x: auto;
+    }
+    
+    .schedule-day {
+        flex: 1;
+        min-width: 100px;
+        border-right: 1px solid #333;
+        padding: 20px 10px;
+        text-align: center;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        min-height: 140px;
+    }
+    
+    .schedule-day:last-child {
+        border-right: none;
+    }
+    
+    .day-header {
+        font-size: 0.85rem;
+        font-weight: 600;
+        margin-bottom: 25px;
+        letter-spacing: 1px;
+    }
+    
+    .day-circle {
+        background-color: #3b71ca;
+        color: white;
+        border-radius: 50%;
+        width: 25px;
+        height: 25px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+    }
+    
+    .day-icon {
+        color: #aaaaaa;
+        margin-bottom: 10px;
+    }
+    
+    .day-text {
+        font-size: 0.8rem;
+        color: #aaaaaa;
+    }
+    
+    .day-task {
+        background-color: #BFDBFE;
+        color: #1E3A8A;
+        padding: 8px;
+        border-radius: 8px;
+        font-size: 0.75rem;
+        width: 90%;
+        text-align: left;
+    }
+    
+    .day-task .time { font-weight: 600; font-size: 0.7rem; color: #3b82f6; }
+    .day-task .title { font-weight: 700; font-size: 0.85rem; margin: 4px 0; }
+    .day-task .subtitle { font-size: 0.65rem; color: #555; }
+    
+    .add-btn {
+        width: 35px;
+        height: 35px;
+        border: 2px solid white;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin-bottom: 15px;
+        cursor: pointer;
+        transition: 0.2s;
+    }
+    .add-btn:hover { background-color: rgba(255,255,255,0.1); }
+    
+    .stats-row {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 20px;
+        margin-bottom: 25px;
+    }
+    
+    .stat-card {
+        display: flex;
+        flex-direction: column;
+    }
+    .stat-card h4 {
+        margin: 0 0 5px 0;
+        font-size: 1.1rem;
+        font-weight: 600;
+    }
+    .stat-card p {
+        margin: 0;
+        font-size: 2rem;
+        font-weight: 700;
+    }
+    
+    .action-row {
+        display: grid;
+        grid-template-columns: 1fr 1fr 1fr;
+        gap: 20px;
+    }
+    
+    .action-card {
+        display: flex;
+        flex-direction: column;
+        cursor: pointer;
+        transition: transform 0.2s;
+        text-decoration: none;
+        color: inherit;
+        position: relative;
+    }
+    .action-card:hover { transform: translateY(-3px); }
+    
+    .action-card h3 {
+        font-size: 1.4rem;
+        margin: 0 0 20px 0;
+    }
+    .action-card .large-val {
+        font-size: 1.1rem;
+        font-weight: 600;
+        margin-bottom: 20px;
+    }
+    .action-card .large-val.yellow { color: #CA8A04; }
+    .action-card .large-val.red { color: #DC2626; }
+    
+    .action-card .desc {
+        font-size: 0.85rem;
+        margin-top: auto;
+        padding-top: 20px;
+        border-top: 1px solid rgba(255,255,255,0.1);
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+    
+    /* Classes card */
+    .classes-list {
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+    }
+    .class-item {
+        border: 1px solid #444;
+        border-radius: 8px;
+        padding: 15px;
+        display: flex;
+        align-items: center;
+        background-color: transparent;
+    }
+    .class-item svg { width: 24px; height: 24px; margin-right: 15px; }
+    .class-item .details { flex-grow: 1; }
+    .class-item h5 { margin: 0; font-size: 1.1rem; font-weight: 600; }
+    .class-item p { margin: 2px 0 0 0; font-size: 0.8rem; color: #aaa; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h3 id="current-date">Friday, April 10</h3>
+    <h1>Good Afternoon <span id="base-greeting-name">[username]</span>!</h1>
+</div>
+
+<div class="card card-blue schedule-card">
+    <h3 style="margin:0 0 10px 0; font-size:1.2rem;">This week's schedule</h3>
+    <div class="schedule-grid" id="schedule-grid">
+        <!-- populated by JS -->
+    </div>
+</div>
+
+<div class="action-row">
+    <!-- Left Column: Stats & Alerts -->
+    <div style="display: flex; flex-direction: column; gap: 20px; grid-column: span 2;">
+        <div class="stats-row">
+            <div class="card card-blue stat-card">
+                <h4>Total Students</h4>
+                <p id="total-students">0</p>
+            </div>
+            <div class="card card-blue stat-card">
+                <h4>Total Sections</h4>
+                <p id="total-sections">0</p>
+            </div>
+        </div>
+        
+        <div class="stats-row">
+            <a href="/at-risk/" class="card card-yellow action-card" style="background-color: rgba(202,138,4,0.1);">
+                <h3 style="color: #CA8A04;">At Risk<br>Students</h3>
+                <div class="large-val yellow"><span id="total-risk">0</span> At Risk Students</div>
+                <div class="desc">
+                    <span>Click to view students with low grades or poor attendance</span>
+                    <svg viewBox="0 0 24 24" width="20" height="20" stroke="currentColor" stroke-width="2" fill="none"><polyline points="9 18 15 12 9 6"></polyline></svg>
+                </div>
+            </a>
+            
+            <a href="/deadlines/" class="card card-red action-card" style="background-color: rgba(220,38,38,0.1);">
+                <h3 style="color: #DC2626;">Deadline<br>Pressure</h3>
+                <div class="large-val red"><span id="total-deadlines">0</span> Upcoming Deadlines</div>
+                <div class="desc">
+                    <span>Click to view tasks that need to be completed soon.</span>
+                    <svg viewBox="0 0 24 24" width="20" height="20" stroke="currentColor" stroke-width="2" fill="none"><polyline points="9 18 15 12 9 6"></polyline></svg>
+                </div>
+            </a>
+        </div>
+    </div>
+    
+    <!-- Right Column: Classes -->
+    <div class="card card-blue">
+        <h3 style="margin:0 0 20px 0; font-size:1.4rem;">My Classes</h3>
+        <div class="classes-list" id="my-classes-list">
+        </div>
+    </div>
+</div>
+
+<!-- Modal to add Schedule -->
+<div id="addScheduleModal" style="display:none; position:fixed; top:0; left:0; width:100vw; height:100vh; background:rgba(0,0,0,0.8); z-index:100; align-items:center; justify-content:center;">
+    <div class="card" style="width:300px; background:#18181A; border:1px solid #333;">
+        <h3 style="margin-top:0;">Add Task for <span id="modal-day"></span></h3>
+        <input type="text" id="sched-title" placeholder="Subject (e.g. IT IPT)" class="search-input" style="width:100%; box-sizing:border-box; margin-bottom:10px;">
+        <input type="text" id="sched-note" placeholder="Note (e.g. Checking progress)" class="search-input" style="width:100%; box-sizing:border-box; margin-bottom:10px;">
+        <input type="time" id="sched-time" class="search-input" style="width:100%; box-sizing:border-box; margin-bottom:20px;">
+        <div style="display:flex; justify-content:flex-end; gap:10px;">
+            <button class="btn btn-outline" onclick="document.getElementById('addScheduleModal').style.display='none'">Cancel</button>
+            <button class="btn" onclick="saveSchedule()">Save</button>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    // Realtime date and greeting
+    function updateDateAndGreeting() {
+        const now = new Date();
+        const days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+        const months = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+        
+        document.getElementById('current-date').textContent = `${days[now.getDay()]}, ${months[now.getMonth()]} ${now.getDate()}`;
+        
+        const hour = now.getHours();
+        let greeting = 'Good Evening';
+        if (hour < 12) greeting = 'Good Morning';
+        else if (hour < 18) greeting = 'Good Afternoon';
+        
+        const username = localStorage.getItem('username');
+        const userNames = JSON.parse(localStorage.getItem('userNames') || '{}');
+        const display = (username && userNames[username] && userNames[username].trim() !== '') ? userNames[username] : (username ? username.split('@')[0] : 'User');
+        document.querySelector('.page-header h1').innerHTML = `${greeting}, <span id="base-greeting-name">${display}</span>!`;
+        
+        // Pull Academic Year into the top right header dynamically
+        const ay = localStorage.getItem('prof_year');
+        const headerDiv = document.querySelector('.top-header');
+        if (headerDiv) {
+            if (ay && ay.trim() !== '') {
+                headerDiv.innerHTML = `<div class="school-year"><svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" fill="none"><rect x="3" y="4" width="18" height="18" rx="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line></svg> A.Y. ${ay}</div>`;
+            } else {
+                headerDiv.innerHTML = '';
+            }
+        }
+    }
+
+    // Render this week's schedule relative to today
+    function renderSchedule() {
+        const grid = document.getElementById('schedule-grid');
+        grid.innerHTML = '';
+        
+        const now = new Date();
+        // Get start of week (Monday)
+        const currentDay = now.getDay(); // 0 is Sunday
+        const diff = now.getDate() - currentDay + (currentDay === 0 ? -6 : 1); // adjust when day is sunday
+        const startOfWeek = new Date(now.setDate(diff));
+        
+        const shortDays = ['MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT', 'SUN'];
+        const todayStr = new Date().toDateString();
+        
+        let storedSchedule = JSON.parse(localStorage.getItem('multiTaskSchedule') || '{}');
+
+        for(let i=0; i<7; i++) {
+            const dayDate = new Date(startOfWeek);
+            dayDate.setDate(dayDate.getDate() + i);
+            const dateNum = dayDate.getDate();
+            const dateStr = dayDate.toDateString();
+            const isoDate = dayDate.toLocaleDateString("en-CA");
+            const isToday = (dayDate.toDateString() === todayStr);
+            const isPast = dayDate < new Date(new Date().setHours(0,0,0,0));
+            
+            const dayHtml = document.createElement('div');
+            dayHtml.className = 'schedule-day';
+            
+            let headerHtml = `<div class="day-header">${shortDays[i]} ${isToday ? `<span class="day-circle">${dateNum}</span>` : dateNum}</div>`;
+            
+            let bodyHtml = '';
+            
+            let tasks = storedSchedule[isoDate] || [];
+            
+            // Check if there is data scheduled for this date
+            if (tasks.length > 0) {
+                tasks.forEach(s => {
+                    bodyHtml += `
+                        <div class="day-task" style="margin-bottom:8px;">
+                            <div class="time">&bull; ${s.startTime} - ${s.endTime}</div>
+                            <div class="title">${s.subject}</div>
+                            <div class="subtitle">${s.notes || s.title || ""}</div>
+                        </div>
+                    `;
+                });
+            } else if (isPast) {
+                bodyHtml = `
+                    <div class="day-icon"><svg viewBox="0 0 24 24" width="30" height="30" stroke="currentColor" fill="none"><path d="M14 2H6a2 2 0 0 0-2 2v16c0 1.1.9 2 2 2h12a2 2 0 0 0 2-2V8l-6-6z"></path><polyline points="14 2 14 8 20 8"></polyline><polyline points="9 15 11 17 16 12"></polyline></svg></div>
+                    <div class="day-text">Clear Day</div>
+                `;
+            } else {
+                bodyHtml = `
+                    <a href="/schedule/" class="add-btn" style="text-decoration:none; color:inherit;">
+                        <svg viewBox="0 0 24 24" width="20" height="20" stroke="currentColor" fill="none"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+                    </a>
+                    <div class="day-text">Add your Day</div>
+                `;
+            }
+            
+            dayHtml.innerHTML = headerHtml + bodyHtml;
+            grid.appendChild(dayHtml);
+        }
+    }
+    
+    let activeModalDate = '';
+    function openAddModal(dateStr) {
+        activeModalDate = dateStr;
+        document.getElementById('modal-day').textContent = dateStr;
+        document.getElementById('addScheduleModal').style.display = 'flex';
+    }
+    
+    function renderDashboardStats() {
+        let subjects = JSON.parse(localStorage.getItem('mySubjectsData') || '[]');
+        let totalSecs = 0;
+        
+        let classesHtml = '';
+        if(subjects.length === 0) {
+            classesHtml = `
+            <div style="text-align:center; padding: 40px 10px; color:#aaa; display:flex; flex-direction:column; align-items:center; gap:15px;">
+                <svg viewBox="0 0 24 24" width="60" height="60" stroke="#555" stroke-width="1.5" fill="none" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M12 20a9.5 9.5 0 1 0 0-19 9.5 9.5 0 0 0 0 19Z"></path>
+                    <path d="M15 10a1.5 1.5 0 1 0 0-3 1.5 1.5 0 0 0 0 3ZM9 10a1.5 1.5 0 1 0 0-3 1.5 1.5 0 0 0 0 3Z"></path>
+                    <path d="M9 16c1.5-1.5 4.5-1.5 6 0"></path>
+                    <path d="M7.5 4 4.5 1 4 5"></path><path d="M16.5 4 19.5 1 20 5"></path>
+                </svg>
+                <div style="font-size:1.2rem; font-weight:600;">No subjects added yet!</div>
+                <div style="font-size:0.9rem;">Please <a href="/subjects/" style="color:#3b71ca; text-decoration:none; font-weight:700;">go to classes</a> and create a new subject to populate your dashboard.</div>
+            </div>`;
+        } else {
+            subjects.forEach(subj => {
+                let secCount = subj.sections ? subj.sections.length : 0;
+                totalSecs += secCount;
+                
+                classesHtml += `
+                <a href="/subjects/?search=${encodeURIComponent(subj.name)}" style="text-decoration:none; color:inherit;">
+                    <div class="class-item" style="cursor:pointer; transition:background 0.2s;" onmouseover="this.style.background='#222'" onmouseout="this.style.background='transparent'">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path></svg>
+                        <div class="details">
+                            <h5>${subj.name}</h5>
+                            <p>${secCount} Sections</p>
+                        </div>
+                        <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2" fill="none"><polyline points="9 18 15 12 9 6"></polyline></svg>
+                    </div>
+                </a>
+                `;
+            });
+        }
+        
+        document.getElementById('my-classes-list').innerHTML = classesHtml;
+        
+        let allStudents = JSON.parse(localStorage.getItem('studentsList') || '[]');
+        document.getElementById('total-students').innerText = allStudents.length;
+        document.getElementById('total-sections').innerText = totalSecs;
+        
+        // --- REAL-TIME UNIFIED AT-RISK CALCULATION ---
+        let riskMap = {}; // Key: "Student|Subject|Section" to avoid double counts
+        
+        // 1. Capture Grade-based risks
+        subjects.forEach(s => {
+            if(s.sections) {
+                s.sections.forEach(sc => {
+                    let secName = sc.section;
+                    let targetSec = secName.replace(/section\s+/i, '').trim();
+                    let tasks = JSON.parse(localStorage.getItem(`tasks_${s.name}_${secName}`) || '[]');
+                    let gradesData = JSON.parse(localStorage.getItem(`grades_${s.name}_${secName}`) || '{}');
+                    
+                    // Fuzzy match students to this section
+                    let secStudents = allStudents.filter(stF => {
+                        let sSec = (stF.section || '').replace(/section\s+/i, '').trim();
+                        return sSec === targetSec;
+                    });
+                    
+                    secStudents.forEach(st => {
+                        let grades = gradesData[st.name] || {};
+                        let totalWeighted = 0; let possibleWeight = 0; let hasGrades = false;
+                        tasks.forEach(t => {
+                            let score = parseFloat(grades[t.id]);
+                            if (!isNaN(score)) {
+                                hasGrades = true;
+                                let max = parseFloat(t.max) || 100;
+                                let weight = parseFloat(t.weight) || 0;
+                                totalWeighted += (score / max) * weight;
+                                possibleWeight += weight;
+                            }
+                        });
+                        
+                        if (hasGrades && possibleWeight > 0) {
+                            let percentage = (totalWeighted/possibleWeight) * 100;
+                            let gradePoint = percentage >= 75 ? (percentage >= 95 ? 1.0 : (percentage >= 90 ? 1.5 : (percentage >= 85 ? 2.0 : (percentage >= 80 ? 2.5 : 3.0)))) : 5.0;
+                            
+                            if (gradePoint >= 3.0) {
+                                // Unique key to count the student only once even if at risk in multiple subjects
+                                let studentKey = (st.school_id || st.name) + "_" + targetSec;
+                                riskMap[studentKey] = true;
+                            }
+                        }
+                    });
+                });
+            }
+        });
+        
+        // 2. Capture Attendance-based risks
+        let attendanceRisks = JSON.parse(localStorage.getItem('atRiskStudents') || '[]');
+        attendanceRisks.forEach(ar => {
+            let cleanArSec = (ar.section || '').replace(/section\s+/i, '').trim();
+            let arKey = (ar.school_id || ar.name) + "_" + cleanArSec;
+            riskMap[arKey] = true;
+        });
+        
+        document.getElementById('total-risk').innerText = Object.keys(riskMap).length;
+        
+        // --- REAL-TIME DEADLINE CALCULATION ---
+        let deadlineCount = 0;
+        subjects.forEach(subj => {
+            if(subj.sections) {
+                subj.sections.forEach(sec => {
+                    let secName = sec.section;
+                    let targetSec = secName.replace(/section\s+/i, '').trim();
+                    let tasks = JSON.parse(localStorage.getItem(`tasks_${subj.name}_${secName}`) || '[]');
+                    let gradesData = JSON.parse(localStorage.getItem(`grades_${subj.name}_${secName}`) || '{}');
+                    let secStudents = allStudents.filter(s => {
+                        let sSec = (s.section || '').replace(/section\s+/i, '').trim();
+                        return sSec === targetSec;
+                    });
+                    
+                    if (secStudents.length > 0) {
+                        tasks.forEach(task => {
+                            let missingStudents = [];
+                            secStudents.forEach(st => {
+                                let score = gradesData[st.name] ? gradesData[st.name][task.id] : undefined;
+                                if (score === undefined || score === "") missingStudents.push(st.name);
+                            });
+                            if (missingStudents.length > 0) deadlineCount++; // tasks with missing entries
+                        });
+                    }
+                });
+            }
+        });
+        document.getElementById('total-deadlines').innerText = deadlineCount;
+    }
+    
+    window.addEventListener("pageshow", () => {
+        updateDateAndGreeting();
+        renderSchedule();
+        renderDashboardStats();
+    });
+</script>
+{% endblock %}
